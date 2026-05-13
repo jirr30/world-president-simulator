@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/events_data.dart';
 import '../../providers/game_provider.dart';
-import '../../widgets/common/approval_bar.dart';
 import '../../widgets/common/country_flag.dart';
 import 'overview_tab.dart';
 import 'economy_tab.dart';
@@ -70,7 +69,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [
           SliverAppBar(
-            expandedHeight: 170,
+            expandedHeight: 110,
             floating: false,
             pinned: true,
             backgroundColor: AppColors.surface,
@@ -182,6 +181,7 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final approvalColor = AppColors.approvalColor(game.approvalRating as double);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -190,61 +190,68 @@ class _DashboardHeader extends StatelessWidget {
           colors: [AppColors.primaryDark, AppColors.surface],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 80, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // Top padding = toolbar (56) + status bar (safe area handled by system)
+      padding: const EdgeInsets.fromLTRB(16, 58, 16, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              CountryFlag(flag: game.country.flag, size: 36),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      game.country.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      '${game.leaderTitle} • Year ${game.currentYear} • Term ${game.yearsInOffice}/${game.termDurationYears}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.approvalColor(game.approvalRating).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColors.approvalColor(game.approvalRating).withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Text(
-                  '${game.approvalRating.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: AppColors.approvalColor(game.approvalRating),
+          CountryFlag(flag: game.country.flag, size: 30),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  game.country.name as String,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
+                    fontFamily: 'Poppins',
                     fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${game.leaderTitle} • Year ${game.currentYear} • Term ${game.yearsInOffice}/${game.termDurationYears}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
                     fontFamily: 'Poppins',
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Compact approval display
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${(game.approvalRating as double).toStringAsFixed(0)}%',
+                style: TextStyle(
+                  color: approvalColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              Text(
+                'Approval',
+                style: TextStyle(
+                  color: approvalColor.withValues(alpha: 0.7),
+                  fontSize: 9,
+                  fontFamily: 'Poppins',
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ApprovalBar(approval: game.approvalRating),
         ],
       ),
     );
