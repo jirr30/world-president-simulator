@@ -7,12 +7,13 @@ class SimulationEngine {
   SimulationEngine._();
 
   static GameStateModel initFromCountry(CountryModel country) {
+    final startApproval = 50.0 + (country.humanDevelopmentIndex * 20) - 10;
     return GameStateModel(
       country: country,
       currentYear: 2024,
       termStartYear: 2024,
       termDurationYears: 5,
-      approvalRating: 50.0 + (country.humanDevelopmentIndex * 20) - 10,
+      approvalRating: startApproval,
       happiness: 40.0 + (country.humanDevelopmentIndex * 30),
       corruption: 100.0 - country.corruptionIndex.toDouble(),
       stability: 50.0 + (country.humanDevelopmentIndex * 25),
@@ -30,7 +31,8 @@ class SimulationEngine {
       diplomaticReputation: 50.0 + (country.corruptionIndex * 0.2),
       alliedCountries: country.allies,
       sanctionedCountries: country.rivals,
-      approvalHistory: [50.0 + (country.humanDevelopmentIndex * 20) - 10],
+      politicalCapital: 20 + (startApproval / 5).round(),
+      approvalHistory: [startApproval],
       gdpHistory: [country.gdpBillion],
     );
   }
@@ -86,6 +88,13 @@ class SimulationEngine {
     final newGdp = state.gdpBillion * (1 + gdpGrowth / 100);
     debt = (debt - gdpGrowth * 0.5).clamp(0.0, 200.0);
 
+    // ── Political Capital earned this year ────────────────────
+    final capitalBase = (approval / 10).floor();                    // 0–10
+    final capitalBonus = (approval >= 80 ? 3 : approval >= 60 ? 1 : 0)  // loyalty bonus
+        + (stability > 70 ? 2 : 0)                                 // stable nation
+        + (state.atWar ? 0 : 1);                                   // peace dividend
+    final newCapital = (state.politicalCapital + capitalBase + capitalBonus).clamp(0, 999);
+
     final newApprovalHistory = [...state.approvalHistory, approval].take(10).toList();
     final newGdpHistory = [...state.gdpHistory, newGdp].take(10).toList();
 
@@ -104,6 +113,7 @@ class SimulationEngine {
       educationIndex: education.clamp(0.0, 100.0),
       healthcareIndex: healthcare.clamp(0.0, 100.0),
       diplomaticReputation: diplo.clamp(0.0, 100.0),
+      politicalCapital: newCapital,
       approvalHistory: newApprovalHistory,
       gdpHistory: newGdpHistory,
     );
@@ -128,13 +138,17 @@ class SimulationEngine {
     return (currentApproval + delta).clamp(0.0, 100.0);
   }
 
+  static bool canAffordPolicy(GameStateModel state, PolicyModel policy) =>
+      state.politicalCapital >= policy.capitalCost;
+
   static GameStateModel applyPolicy(GameStateModel state, PolicyModel policy) {
     var s = state;
     for (final effect in policy.effects) {
       s = _applyStat(s, effect.statName, effect.delta);
     }
     final active = [...state.activePolicies, policy];
-    return s.copyWith(activePolicies: active);
+    final newCapital = (state.politicalCapital - policy.capitalCost).clamp(0, 999);
+    return s.copyWith(activePolicies: active, politicalCapital: newCapital);
   }
 
   static GameStateModel applyEventChoice(GameStateModel state, EventChoice choice) {
@@ -142,7 +156,8 @@ class SimulationEngine {
     for (final effect in choice.effects) {
       s = _applyStat(s, effect.statName, effect.delta);
     }
-    return s;
+    // Crisis resolution earns +2 political capital
+    return s.copyWith(politicalCapital: (s.politicalCapital + 2).clamp(0, 999));
   }
 
   static GameStateModel _applyStat(GameStateModel s, String stat, double delta) {

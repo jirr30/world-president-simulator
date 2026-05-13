@@ -37,6 +37,7 @@ class GameSaveService {
       'alliedCountries': state.alliedCountries,
       'sanctionedCountries': state.sanctionedCountries,
       'activePolicyIds': state.activePolicies.map((p) => p.id).toList(),
+      'politicalCapital': state.politicalCapital,
       'approvalHistory': state.approvalHistory,
       'gdpHistory': state.gdpHistory,
     };
@@ -84,6 +85,7 @@ class GameSaveService {
         alliedCountries: List<String>.from(map['alliedCountries'] ?? []),
         sanctionedCountries: List<String>.from(map['sanctionedCountries'] ?? []),
         activePolicies: activePolicies,
+        politicalCapital: map['politicalCapital'] as int? ?? 20,
         approvalHistory: List<double>.from(
             (map['approvalHistory'] as List).map((e) => (e as num).toDouble())),
         gdpHistory: List<double>.from(

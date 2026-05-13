@@ -22,7 +22,8 @@ class PolicyModel {
   final String description;
   final PolicyCategory category;
   final List<StatEffect> effects;
-  final double cost; // billion USD per year
+  final double cost; // billion USD per year (display only)
+  final int capitalCost; // political capital required to enact
   final int durationYears; // 0 = permanent
   final bool requiresApproval; // needs parliament approval
   final int minApprovalToApply; // minimum approval rating needed
@@ -34,6 +35,7 @@ class PolicyModel {
     required this.category,
     required this.effects,
     required this.cost,
+    this.capitalCost = 5,
     this.durationYears = 0,
     this.requiresApproval = false,
     this.minApprovalToApply = 0,

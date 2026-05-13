@@ -42,6 +42,47 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.go('/dashboard'),
         ),
+        actions: [
+          if (game != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('💎', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${game.politicalCapital}',
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Capital',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
@@ -59,21 +100,25 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
             category: PolicyCategory.economic,
             game: game,
             onApply: _applyPolicy,
+            playerCapital: game?.politicalCapital ?? 0,
           ),
           _PolicyList(
             category: PolicyCategory.military,
             game: game,
             onApply: _applyPolicy,
+            playerCapital: game?.politicalCapital ?? 0,
           ),
           _PolicyList(
             category: PolicyCategory.social,
             game: game,
             onApply: _applyPolicy,
+            playerCapital: game?.politicalCapital ?? 0,
           ),
           _PolicyList(
             category: PolicyCategory.diplomatic,
             game: game,
             onApply: _applyPolicy,
+            playerCapital: game?.politicalCapital ?? 0,
           ),
         ],
       ),
@@ -83,6 +128,19 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
   void _applyPolicy(PolicyModel policy) {
     final game = ref.read(gameProvider);
     if (game == null) return;
+
+    if (game.politicalCapital < policy.capitalCost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '💎 Not enough Political Capital (need ${policy.capitalCost}, have ${game.politicalCapital}).',
+            style: const TextStyle(fontFamily: 'Poppins'),
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
 
     if (game.approvalRating < policy.minApprovalToApply) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,11 +188,13 @@ class _PolicyList extends StatelessWidget {
   final PolicyCategory category;
   final dynamic game;
   final void Function(PolicyModel) onApply;
+  final int playerCapital;
 
   const _PolicyList({
     required this.category,
     required this.game,
     required this.onApply,
+    required this.playerCapital,
   });
 
   @override
@@ -151,6 +211,8 @@ class _PolicyList extends StatelessWidget {
         return _PolicyCard(
           policy: policy,
           isActive: isActive,
+          canAfford: playerCapital >= policy.capitalCost,
+          playerCapital: playerCapital,
           onApply: () => onApply(policy),
         );
       },
@@ -161,11 +223,15 @@ class _PolicyList extends StatelessWidget {
 class _PolicyCard extends StatelessWidget {
   final PolicyModel policy;
   final bool isActive;
+  final bool canAfford;
+  final int playerCapital;
   final VoidCallback onApply;
 
   const _PolicyCard({
     required this.policy,
     required this.isActive,
+    required this.canAfford,
+    required this.playerCapital,
     required this.onApply,
   });
 
@@ -274,26 +340,58 @@ class _PolicyCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    // Capital cost badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: canAfford
+                            ? AppColors.accent.withValues(alpha: 0.12)
+                            : AppColors.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: canAfford
+                              ? AppColors.accent.withValues(alpha: 0.35)
+                              : AppColors.danger.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('💎', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${policy.capitalCost}',
+                            style: TextStyle(
+                              color: canAfford ? AppColors.accent : AppColors.danger,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     if (policy.cost > 0) ...[
-                      const Icon(Icons.attach_money_rounded, color: AppColors.warning, size: 16),
+                      const Icon(Icons.attach_money_rounded, color: AppColors.textMuted, size: 14),
                       Text(
-                        'Cost: \$${policy.cost.toStringAsFixed(0)}B/year',
+                        '\$${policy.cost.toStringAsFixed(0)}B/yr',
                         style: const TextStyle(
-                          color: AppColors.warning,
-                          fontSize: 12,
+                          color: AppColors.textMuted,
+                          fontSize: 11,
                           fontFamily: 'Poppins',
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                     ],
                     if (policy.minApprovalToApply > 0) ...[
-                      const Icon(Icons.thumb_up_rounded, color: AppColors.accent, size: 14),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.thumb_up_rounded, color: AppColors.accent, size: 13),
+                      const SizedBox(width: 3),
                       Text(
-                        'Requires ${policy.minApprovalToApply}% approval',
+                        '${policy.minApprovalToApply}%+',
                         style: const TextStyle(
                           color: AppColors.accent,
-                          fontSize: 12,
+                          fontSize: 11,
                           fontFamily: 'Poppins',
                         ),
                       ),
@@ -301,19 +399,20 @@ class _PolicyCard extends StatelessWidget {
                     const Spacer(),
                     if (!isActive)
                       ElevatedButton(
-                        onPressed: onApply,
+                        onPressed: canAfford ? onApply : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: policy.categoryColor,
+                          backgroundColor: canAfford ? policy.categoryColor : AppColors.cardBorder,
+                          disabledBackgroundColor: AppColors.cardBorder,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text(
-                          'Apply',
+                        child: Text(
+                          canAfford ? 'Apply' : 'Need 💎${policy.capitalCost}',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
+                            color: canAfford ? Colors.white : AppColors.textMuted,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'Poppins',
                           ),

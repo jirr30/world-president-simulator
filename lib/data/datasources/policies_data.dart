@@ -6,7 +6,7 @@ class PoliciesData {
   static const List<PolicyModel> all = [
     // ═══════════════════ ECONOMIC ═══════════════════
     PolicyModel(
-      id: 'tax_cut', name: 'Tax Reduction', cost: 5,
+      id: 'tax_cut', name: 'Tax Reduction', cost: 5, capitalCost: 4,
       description: 'Lower income tax rates to stimulate economic activity and consumer spending.',
       category: PolicyCategory.economic,
       effects: [
@@ -17,7 +17,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'tax_hike', name: 'Tax Increase', cost: 0,
+      id: 'tax_hike', name: 'Tax Increase', cost: 0, capitalCost: 2,
       description: 'Raise taxes to reduce national debt and fund public services.',
       category: PolicyCategory.economic,
       effects: [
@@ -28,7 +28,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'infrastructure', name: 'Infrastructure Investment', cost: 15,
+      id: 'infrastructure', name: 'Infrastructure Investment', cost: 15, capitalCost: 7,
       description: 'Massive investment in roads, bridges, ports, and public transport.',
       category: PolicyCategory.economic,
       effects: [
@@ -39,7 +39,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'privatization', name: 'Privatization Program', cost: 0,
+      id: 'privatization', name: 'Privatization Program', cost: 0, capitalCost: 4,
       description: 'Sell state-owned enterprises to private investors to raise funds.',
       category: PolicyCategory.economic,
       effects: [
@@ -50,7 +50,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'free_trade', name: 'Free Trade Agreement', cost: 2,
+      id: 'free_trade', name: 'Free Trade Agreement', cost: 2, capitalCost: 3,
       description: 'Open markets by reducing tariffs and trade barriers with partner nations.',
       category: PolicyCategory.economic,
       effects: [
@@ -61,7 +61,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'protectionism', name: 'Trade Protectionism', cost: 3,
+      id: 'protectionism', name: 'Trade Protectionism', cost: 3, capitalCost: 3,
       description: 'Impose tariffs and trade barriers to protect domestic industries.',
       category: PolicyCategory.economic,
       effects: [
@@ -72,7 +72,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'austerity', name: 'Austerity Measures', cost: 0,
+      id: 'austerity', name: 'Austerity Measures', cost: 0, capitalCost: 3,
       description: 'Cut government spending to reduce the national deficit.',
       category: PolicyCategory.economic,
       effects: [
@@ -83,7 +83,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'stimulus', name: 'Economic Stimulus', cost: 20,
+      id: 'stimulus', name: 'Economic Stimulus', cost: 20, capitalCost: 8,
       description: 'Government spending package to boost the economy during downturns.',
       category: PolicyCategory.economic,
       effects: [
@@ -94,7 +94,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'tech_investment', name: 'Tech & Innovation Fund', cost: 10,
+      id: 'tech_investment', name: 'Tech & Innovation Fund', cost: 10, capitalCost: 6,
       description: 'Invest in research, development, and emerging technology sectors.',
       category: PolicyCategory.economic,
       effects: [
@@ -105,7 +105,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'renewable_energy', name: 'Renewable Energy Push', cost: 12,
+      id: 'renewable_energy', name: 'Renewable Energy Push', cost: 12, capitalCost: 6,
       description: 'Transition to solar, wind, and clean energy sources.',
       category: PolicyCategory.economic,
       effects: [
@@ -118,7 +118,7 @@ class PoliciesData {
 
     // ═══════════════════ MILITARY ═══════════════════
     PolicyModel(
-      id: 'military_expansion', name: 'Military Expansion', cost: 25,
+      id: 'military_expansion', name: 'Military Expansion', cost: 25, capitalCost: 9,
       description: 'Increase defense spending to build a stronger armed forces.',
       category: PolicyCategory.military,
       effects: [
@@ -129,7 +129,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'military_cut', name: 'Defense Budget Cut', cost: 0,
+      id: 'military_cut', name: 'Defense Budget Cut', cost: 0, capitalCost: 3,
       description: 'Reduce military spending and redirect funds to social programs.',
       category: PolicyCategory.military,
       effects: [
@@ -140,7 +140,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'nuclear_program', name: 'Nuclear Deterrent', cost: 50,
+      id: 'nuclear_program', name: 'Nuclear Deterrent', cost: 50, capitalCost: 15,
       description: 'Develop nuclear weapons capability as a strategic deterrent.',
       category: PolicyCategory.military,
       minApprovalToApply: 40,
@@ -152,7 +152,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'conscription', name: 'Mandatory Military Service', cost: 3,
+      id: 'conscription', name: 'Mandatory Military Service', cost: 3, capitalCost: 7,
       description: 'Require all citizens to serve in the military for a period.',
       category: PolicyCategory.military,
       effects: [
@@ -163,7 +163,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'military_alliance', name: 'Join Military Alliance', cost: 2,
+      id: 'military_alliance', name: 'Join Military Alliance', cost: 2, capitalCost: 4,
       description: 'Form a mutual defense pact with allied nations.',
       category: PolicyCategory.military,
       effects: [
@@ -176,7 +176,7 @@ class PoliciesData {
 
     // ═══════════════════ SOCIAL ═══════════════════
     PolicyModel(
-      id: 'universal_healthcare', name: 'Universal Healthcare', cost: 18,
+      id: 'universal_healthcare', name: 'Universal Healthcare', cost: 18, capitalCost: 9,
       description: 'Provide free healthcare for all citizens.',
       category: PolicyCategory.social,
       effects: [
@@ -187,7 +187,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'education_reform', name: 'Education Reform', cost: 12,
+      id: 'education_reform', name: 'Education Reform', cost: 12, capitalCost: 7,
       description: 'Overhaul the education system with increased funding and curriculum reform.',
       category: PolicyCategory.social,
       effects: [
@@ -198,7 +198,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'anti_corruption', name: 'Anti-Corruption Drive', cost: 5,
+      id: 'anti_corruption', name: 'Anti-Corruption Drive', cost: 5, capitalCost: 6,
       description: 'Launch a major campaign to root out government corruption.',
       category: PolicyCategory.social,
       minApprovalToApply: 35,
@@ -210,7 +210,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'social_housing', name: 'Social Housing Program', cost: 10,
+      id: 'social_housing', name: 'Social Housing Program', cost: 10, capitalCost: 6,
       description: 'Build affordable housing for low-income citizens.',
       category: PolicyCategory.social,
       effects: [
@@ -221,7 +221,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'media_freedom', name: 'Press Freedom', cost: 1,
+      id: 'media_freedom', name: 'Press Freedom', cost: 1, capitalCost: 3,
       description: 'Guarantee freedom of the press and independent journalism.',
       category: PolicyCategory.social,
       effects: [
@@ -232,7 +232,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'censorship', name: 'Media Censorship', cost: 1,
+      id: 'censorship', name: 'Media Censorship', cost: 1, capitalCost: 5,
       description: 'Control state and private media to manage public narrative.',
       category: PolicyCategory.social,
       effects: [
@@ -245,7 +245,7 @@ class PoliciesData {
 
     // ═══════════════════ DIPLOMATIC ═══════════════════
     PolicyModel(
-      id: 'foreign_aid', name: 'Foreign Aid Program', cost: 8,
+      id: 'foreign_aid', name: 'Foreign Aid Program', cost: 8, capitalCost: 5,
       description: 'Provide financial and humanitarian aid to developing nations.',
       category: PolicyCategory.diplomatic,
       effects: [
@@ -256,7 +256,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'sanctions', name: 'Economic Sanctions', cost: 1,
+      id: 'sanctions', name: 'Economic Sanctions', cost: 1, capitalCost: 4,
       description: 'Impose trade sanctions on a rival or rogue nation.',
       category: PolicyCategory.diplomatic,
       effects: [
@@ -267,7 +267,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'open_borders', name: 'Open Border Policy', cost: 2,
+      id: 'open_borders', name: 'Open Border Policy', cost: 2, capitalCost: 3,
       description: 'Allow free movement of people and workers across borders.',
       category: PolicyCategory.diplomatic,
       effects: [
@@ -278,7 +278,7 @@ class PoliciesData {
       ],
     ),
     PolicyModel(
-      id: 'un_leadership', name: 'Seek UN Leadership', cost: 4,
+      id: 'un_leadership', name: 'Seek UN Leadership', cost: 4, capitalCost: 5,
       description: 'Campaign for a leadership role in United Nations bodies.',
       category: PolicyCategory.diplomatic,
       effects: [

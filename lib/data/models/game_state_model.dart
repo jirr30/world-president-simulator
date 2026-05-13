@@ -39,6 +39,9 @@ class GameStateModel {
   // Applied Policies
   final List<PolicyModel> activePolicies;
 
+  // Political Capital (earned from approval, spent on policies)
+  final int politicalCapital;
+
   // History
   final List<double> approvalHistory;
   final List<double> gdpHistory;
@@ -68,6 +71,7 @@ class GameStateModel {
     this.alliedCountries = const [],
     this.sanctionedCountries = const [],
     this.activePolicies = const [],
+    this.politicalCapital = 20,
     this.approvalHistory = const [],
     this.gdpHistory = const [],
   });
@@ -116,6 +120,7 @@ class GameStateModel {
     List<String>? alliedCountries,
     List<String>? sanctionedCountries,
     List<PolicyModel>? activePolicies,
+    int? politicalCapital,
     List<double>? approvalHistory,
     List<double>? gdpHistory,
   }) {
@@ -144,6 +149,7 @@ class GameStateModel {
       alliedCountries: alliedCountries ?? this.alliedCountries,
       sanctionedCountries: sanctionedCountries ?? this.sanctionedCountries,
       activePolicies: activePolicies ?? this.activePolicies,
+      politicalCapital: politicalCapital ?? this.politicalCapital,
       approvalHistory: approvalHistory ?? this.approvalHistory,
       gdpHistory: gdpHistory ?? this.gdpHistory,
     );

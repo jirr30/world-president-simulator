@@ -522,6 +522,8 @@ class _BottomHud extends StatelessWidget {
               color: AppColors.diplomacy,
               label: 'Stable',
               value: '${game.stability.toStringAsFixed(0)}%'),
+          const SizedBox(width: 6),
+          _CapitalChip(capital: game.politicalCapital),
           const Spacer(),
           OutlinedButton.icon(
             onPressed: onPolicies,
@@ -615,6 +617,56 @@ class _HudChip extends StatelessWidget {
               ),
               Text(
                 label,
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 8,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CapitalChip extends StatelessWidget {
+  final int capital;
+  const _CapitalChip({required this.capital});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLow = capital < 5;
+    final color = isLow ? AppColors.danger : AppColors.accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('💎', style: TextStyle(fontSize: 11, height: 1.1)),
+          const SizedBox(width: 4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$capital',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: 'Poppins',
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                'Capital',
                 style: const TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 8,
@@ -931,6 +983,8 @@ class _StatsPanel extends StatelessWidget {
                 _Section('Approval'),
                 _Row('Rating', '${game.approvalRating.toStringAsFixed(0)}%',
                     approvalColor, Icons.thumb_up_rounded),
+                _Row('Political Capital', '💎 ${game.politicalCapital}',
+                    AppColors.accent, Icons.star_rounded),
                 const SizedBox(height: 10),
                 _Section('Economy'),
                 _Row('GDP', gdpStr, AppColors.economy,
