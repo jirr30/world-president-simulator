@@ -224,13 +224,14 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                     onTapDown: (d) => _pendingTapMap = d.localPosition,
                     onTap: _handleTap,
                     child: Stack(
+                      fit: StackFit.expand,
                       children: [
-                        // ── Accurate world map (SVG with real country borders) ──
-                        Positioned.fill(
-                          child: SvgPicture.asset(
-                            'assets/images/world_map.svg',
-                            fit: BoxFit.fill,
-                          ),
+                        // ── Accurate world map SVG (fills exact screen bounds) ──
+                        SvgPicture.asset(
+                          'assets/images/world_map.svg',
+                          fit: BoxFit.fill,
+                          width: _mapSize.width,
+                          height: _mapSize.height,
                         ),
                         // ── Interactive overlay (markers, labels) ──
                         CustomPaint(
@@ -239,7 +240,6 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                             tappedId: _tappedCountryId,
                             zoom: _currentZoom,
                           ),
-                          size: _mapSize,
                         ),
                       ],
                     ),
