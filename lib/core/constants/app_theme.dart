@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
@@ -7,7 +8,8 @@ class AppTheme {
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        fontFamily: 'Poppins',
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+        fontFamily: GoogleFonts.poppins().fontFamily,
         colorScheme: const ColorScheme.dark(
           primary: AppColors.primary,
           secondary: AppColors.accent,
@@ -108,20 +110,6 @@ class AppTheme {
         dividerTheme: const DividerThemeData(
           color: AppColors.cardBorder,
           thickness: 1,
-        ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-          displayMedium: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-          headlineLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-          headlineMedium: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-          headlineSmall: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-          titleLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-          titleMedium: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-          titleSmall: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-          bodyLarge: TextStyle(color: AppColors.textPrimary),
-          bodyMedium: TextStyle(color: AppColors.textSecondary),
-          bodySmall: TextStyle(color: AppColors.textMuted),
-          labelLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
         ),
       );
 }
