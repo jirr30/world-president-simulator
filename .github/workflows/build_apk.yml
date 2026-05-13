@@ -3,7 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # bisa trigger manual
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,19 +22,22 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.3'
+          flutter-version: '3.41.9'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (debug - untuk testing)
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build APK (debug)
         run: flutter build apk --debug
 
-      - name: Upload APK ke Artifacts
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: world-president-simulator-debug
           path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 7
+          retention-days: 14
