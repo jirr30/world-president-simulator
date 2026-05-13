@@ -682,6 +682,11 @@ class _BottomHudState extends State<_BottomHud>
           const SizedBox(width: 10),
           Container(width: 1, height: 28, color: AppColors.cardBorder),
           const SizedBox(width: 10),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
           _HudChip(
               icon: Icons.trending_up_rounded,
               color: AppColors.economy,
@@ -701,7 +706,11 @@ class _BottomHudState extends State<_BottomHud>
               value: '${game.stability.toStringAsFixed(0)}%'),
           const SizedBox(width: 6),
           _CapitalChip(capital: game.politicalCapital),
-          const Spacer(),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           OutlinedButton.icon(
             onPressed: widget.onPolicies,
             icon: const Icon(Icons.policy_rounded,
@@ -2069,8 +2078,10 @@ class _AdvanceConfirmSheet extends StatelessWidget {
           Row(children: [
             const Icon(Icons.thumb_up_rounded, size: 13, color: AppColors.textMuted),
             const SizedBox(width: 6),
-            Text('Current approval: ${game.approvalRating.toStringAsFixed(0)}%',
-                style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12)),
+            Flexible(
+              child: Text('Current approval: ${game.approvalRating.toStringAsFixed(0)}%',
+                  style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12)),
+            ),
             const SizedBox(width: 6),
             Text(
               '${approvalTrend >= 0 ? '▲' : '▼'} ${approvalTrend.abs().toStringAsFixed(1)}%',
@@ -2091,8 +2102,10 @@ class _AdvanceConfirmSheet extends StatelessWidget {
               child: Row(children: [
                 const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 13),
                 const SizedBox(width: 6),
-                Text('Approval critical — impeached if it drops below 15%',
-                    style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+                const Expanded(
+                  child: Text('Approval critical — impeached if it drops below 15%',
+                      style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+                ),
               ]),
             ),
           ],
