@@ -116,6 +116,29 @@ class PoliciesData {
       ],
     ),
 
+    PolicyModel(
+      id: 'oil_industry', name: 'Oil & Gas Expansion', cost: 20, capitalCost: 7,
+      description: 'Invest in oil extraction and energy infrastructure to boost reserves and revenue.',
+      category: PolicyCategory.economic,
+      effects: [
+        StatEffect('Oil Reserves', 20.0),
+        StatEffect('Natural Resources', 15.0),
+        StatEffect('GDP Growth', 2.0),
+        StatEffect('Approval', 1.0),
+      ],
+    ),
+    PolicyModel(
+      id: 'mining_boom', name: 'Mining Expansion', cost: 12, capitalCost: 5,
+      description: 'Open new mining operations to extract minerals and strategic resources.',
+      category: PolicyCategory.economic,
+      effects: [
+        StatEffect('Natural Resources', 20.0),
+        StatEffect('GDP Growth', 1.5),
+        StatEffect('Employment', 3.0),
+        StatEffect('Approval', 2.0),
+      ],
+    ),
+
     // ═══════════════════ MILITARY ═══════════════════
     PolicyModel(
       id: 'military_expansion', name: 'Military Expansion', cost: 25, capitalCost: 9,
@@ -171,6 +194,28 @@ class PoliciesData {
         StatEffect('Diplomatic Rep', 8.0),
         StatEffect('Stability', 5.0),
         StatEffect('Approval', 3.0),
+      ],
+    ),
+    PolicyModel(
+      id: 'troop_surge', name: 'Military Recruitment Drive', cost: 8, capitalCost: 5,
+      description: 'Expand active military through nationwide recruitment campaigns.',
+      category: PolicyCategory.military,
+      effects: [
+        StatEffect('Troops', 80.0),
+        StatEffect('Military Strength', 5.0),
+        StatEffect('Military Readiness', 5.0),
+        StatEffect('Happiness', -2.0),
+      ],
+    ),
+    PolicyModel(
+      id: 'modernization', name: 'Military Modernization', cost: 15, capitalCost: 6,
+      description: 'Upgrade weapons systems, vehicles, and soldier training programs.',
+      category: PolicyCategory.military,
+      effects: [
+        StatEffect('Military Readiness', 18.0),
+        StatEffect('Military Strength', 8.0),
+        StatEffect('GDP Growth', -0.5),
+        StatEffect('Approval', 2.0),
       ],
     ),
 
@@ -240,6 +285,28 @@ class PoliciesData {
         StatEffect('Stability', 4.0),
         StatEffect('Diplomatic Rep', -6.0),
         StatEffect('Approval', -5.0),
+      ],
+    ),
+    PolicyModel(
+      id: 'food_program', name: 'National Food Security Program', cost: 10, capitalCost: 6,
+      description: 'Subsidize food production and distribution to guarantee access for all citizens.',
+      category: PolicyCategory.social,
+      effects: [
+        StatEffect('Food Security', 18.0),
+        StatEffect('Happiness', 7.0),
+        StatEffect('Approval', 6.0),
+        StatEffect('GDP Growth', -0.5),
+      ],
+    ),
+    PolicyModel(
+      id: 'agricultural_reform', name: 'Agricultural Modernization', cost: 8, capitalCost: 5,
+      description: 'Modernize farming with technology and land reform to boost output.',
+      category: PolicyCategory.social,
+      effects: [
+        StatEffect('Food Security', 12.0),
+        StatEffect('Employment', 3.0),
+        StatEffect('GDP Growth', 1.0),
+        StatEffect('Approval', 4.0),
       ],
     ),
 

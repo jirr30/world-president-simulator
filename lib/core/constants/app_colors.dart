@@ -28,6 +28,10 @@ class AppColors {
   static const Color socialDark = Color(0xFF4A148C);
   static const Color approval = Color(0xFFFFEB3B);
 
+  // Resource Colors
+  static const Color food = Color(0xFF76C442);
+  static const Color resources = Color(0xFFFF6D00);
+
   // Status Colors
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);

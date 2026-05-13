@@ -35,6 +35,19 @@ class MilitaryTab extends StatelessWidget {
               color: AppColors.military,
             ),
             StatCard(
+              label: 'Active Troops',
+              value: game.troopCountFormatted,
+              icon: Icons.people_rounded,
+              color: AppColors.military,
+            ),
+            StatCard(
+              label: 'Readiness',
+              value: '${game.militaryReadiness.toStringAsFixed(0)}%',
+              icon: Icons.military_tech_rounded,
+              color: AppColors.military,
+              progress: game.militaryReadiness / 100,
+            ),
+            StatCard(
               label: 'War Status',
               value: game.atWar ? 'At War' : 'At Peace',
               icon: game.atWar ? Icons.local_fire_department_rounded : Icons.handshake_rounded,
@@ -51,7 +64,113 @@ class MilitaryTab extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         _MilitaryRankCard(strength: game.militaryStrength),
+        const SizedBox(height: 16),
+        _StrategicResourcesCard(game: game),
         const SizedBox(height: 80),
+      ],
+    );
+  }
+}
+
+class _StrategicResourcesCard extends StatelessWidget {
+  final GameStateModel game;
+
+  const _StrategicResourcesCard({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.resources.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Strategic Resources',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Poppins',
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ResourceBar(
+            label: 'Natural Resources',
+            value: game.naturalResourceIndex,
+            icon: Icons.terrain_rounded,
+            color: AppColors.resources,
+          ),
+          const SizedBox(height: 10),
+          _ResourceBar(
+            label: 'Oil & Energy Reserves',
+            value: game.oilReserves,
+            icon: Icons.local_gas_station_rounded,
+            color: AppColors.warning,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResourceBar extends StatelessWidget {
+  final String label;
+  final double value;
+  final IconData icon;
+  final Color color;
+
+  const _ResourceBar({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 15),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
+            Text(
+              '${value.toStringAsFixed(0)}/100',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: (value / 100).clamp(0.0, 1.0),
+            backgroundColor: color.withValues(alpha: 0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 7,
+          ),
+        ),
       ],
     );
   }

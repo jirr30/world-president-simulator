@@ -7,6 +7,7 @@ import '../../presentation/screens/country_select/country_select_screen.dart';
 import '../../presentation/screens/dashboard/dashboard_screen.dart';
 import '../../presentation/screens/game/map_game_screen.dart';
 import '../../presentation/screens/policy/policy_screen.dart';
+import '../../presentation/screens/buildings/buildings_screen.dart';
 import '../../presentation/screens/event/event_screen.dart';
 import '../../presentation/screens/game_over/game_over_screen.dart';
 
@@ -14,14 +15,42 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-      GoRoute(path: '/select', builder: (_, __) => const CountrySelectScreen()),
-      GoRoute(path: '/dashboard', builder: (_, __) => const MapGameScreen()),
-      GoRoute(path: '/dashboard/classic', builder: (_, __) => const DashboardScreen()),
-      GoRoute(path: '/policies', builder: (_, __) => const PolicyScreen()),
-      GoRoute(path: '/event', builder: (_, __) => const EventScreen()),
-      GoRoute(path: '/gameover', builder: (_, __) => const GameOverScreen()),
+      GoRoute(
+        path: '/',
+        pageBuilder: (_, state) => _fadePage(state, const SplashScreen()),
+      ),
+      GoRoute(
+        path: '/home',
+        pageBuilder: (_, state) => _slidePage(state, const HomeScreen()),
+      ),
+      GoRoute(
+        path: '/select',
+        pageBuilder: (_, state) => _slidePage(state, const CountrySelectScreen()),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        pageBuilder: (_, state) => _slidePage(state, const MapGameScreen()),
+      ),
+      GoRoute(
+        path: '/dashboard/classic',
+        pageBuilder: (_, state) => _slidePage(state, const DashboardScreen()),
+      ),
+      GoRoute(
+        path: '/policies',
+        pageBuilder: (_, state) => _slidePage(state, const PolicyScreen()),
+      ),
+      GoRoute(
+        path: '/buildings',
+        pageBuilder: (_, state) => _slidePage(state, const BuildingsScreen()),
+      ),
+      GoRoute(
+        path: '/event',
+        pageBuilder: (_, state) => _fadePage(state, const EventScreen()),
+      ),
+      GoRoute(
+        path: '/gameover',
+        pageBuilder: (_, state) => _fadePage(state, GameOverScreen(reason: state.extra as String?)),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       backgroundColor: const Color(0xFF0A0E2A),
@@ -46,3 +75,33 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+CustomTransitionPage<void> _slidePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final slide = Tween<Offset>(begin: const Offset(0.06, 0), end: Offset.zero)
+          .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+      final fade = CurvedAnimation(parent: animation, curve: Curves.easeIn);
+      return FadeTransition(
+        opacity: fade,
+        child: SlideTransition(position: slide, child: child),
+      );
+    },
+  );
+}
+
+CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 350),
+    transitionsBuilder: (context, animation, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+      child: child,
+    ),
+  );
+}

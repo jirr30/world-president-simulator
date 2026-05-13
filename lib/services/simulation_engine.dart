@@ -2,6 +2,7 @@ import '../data/models/country_model.dart';
 import '../data/models/game_state_model.dart';
 import '../data/models/policy_model.dart';
 import '../data/models/event_model.dart';
+import '../data/datasources/buildings_data.dart';
 
 class SimulationEngine {
   SimulationEngine._();
@@ -31,6 +32,13 @@ class SimulationEngine {
       diplomaticReputation: 50.0 + (country.corruptionIndex * 0.2),
       alliedCountries: country.allies,
       sanctionedCountries: country.rivals,
+      treasury: country.gdpBillion * (country.humanDevelopmentIndex * 0.06 + 0.02),
+      foodSecurity: (40.0 + country.humanDevelopmentIndex * 45).clamp(20.0, 95.0),
+      agriculturalOutput: (country.gdpBillion * (0.20 - country.humanDevelopmentIndex * 0.15)).clamp(country.gdpBillion * 0.02, country.gdpBillion * 0.25),
+      troopCount: (country.militaryBudgetBillion * 5).clamp(5.0, 5000.0),
+      militaryReadiness: (30.0 + country.humanDevelopmentIndex * 40.0 + (country.militaryBudgetBillion / 10).clamp(0.0, 20.0)).clamp(10.0, 90.0),
+      naturalResourceIndex: 50.0,
+      oilReserves: 40.0,
       politicalCapital: 20 + (startApproval / 5).round(),
       approvalHistory: [startApproval],
       gdpHistory: [country.gdpBillion],
@@ -56,12 +64,24 @@ class SimulationEngine {
     double healthcare = state.healthcareIndex;
     double diplo = state.diplomaticReputation;
     double debt = state.nationalDebt;
+    double foodSec = state.foodSecurity;
+    double agriOut = state.agriculturalOutput;
+    double milReadiness = state.militaryReadiness;
+    double natResources = state.naturalResourceIndex;
+    double oilRes = state.oilReserves;
+    double troops = state.troopCount;
 
     // Natural trends
     gdpGrowth += (happiness > 60 ? 0.5 : -0.3);
     gdpGrowth -= (inflation > 5 ? 0.5 : 0);
     gdpGrowth -= (unemployment > 10 ? 0.4 : 0);
     gdpGrowth += (state.alliedCountries.length * 0.1).clamp(0, 1.5);
+
+    // Alliance & sanction ongoing effects
+    diplo += (state.alliedCountries.length * 0.4).clamp(0, 6);
+    diplo -= (state.sanctionedCountries.length * 0.3).clamp(0, 4);
+    gdpGrowth -= (state.sanctionedCountries.length * 0.05).clamp(0, 0.5);
+    stability += (state.alliedCountries.length * 0.1).clamp(0, 1.5);
 
     happiness += (healthcare - 50) * 0.05;
     happiness += (education - 50) * 0.04;
@@ -76,6 +96,66 @@ class SimulationEngine {
 
     corruption += (education < 40 ? 0.5 : -0.2);
 
+    // Food security
+    foodSec += (healthcare - 50) * 0.03;
+    foodSec -= (unemployment > 15 ? 0.4 : 0);
+    foodSec -= (corruption > 60 ? 0.3 : 0);
+    foodSec += (gdpGrowth > 2 ? 0.2 : gdpGrowth < 0 ? -0.3 : 0);
+    agriOut *= (1 + gdpGrowth / 200);
+    happiness += (foodSec < 30 ? -1.0 : foodSec > 80 ? 0.3 : 0);
+
+    // Military resources
+    milReadiness += (military > 60 ? 0.2 : -0.1);
+    troops += (military > 60 ? 2.0 : -1.0);
+
+    // Natural resources (slow depletion unless policies invest)
+    natResources -= 0.15;
+    oilRes -= 0.08;
+
+    // Resources boost economy
+    gdpGrowth += (natResources > 70 ? 0.3 : 0);
+    gdpGrowth += (oilRes > 70 ? 0.2 : 0);
+
+    // Tax rate effects — baseline 25%, each 5% above reduces growth & happiness
+    final taxDelta = (state.taxRate - 25.0) / 5.0; // units of 5% deviation
+    gdpGrowth -= taxDelta * 0.25;       // +5% tax → -0.25% GDP growth
+    happiness -= taxDelta * 0.4;        // +5% tax → -0.4 happiness
+    unemployment += taxDelta * 0.05;    // +5% tax → slight unemployment rise
+    // Low tax bonus: below 15% boosts growth but hurts public services
+    if (state.taxRate < 15) {
+      gdpGrowth += 0.5;
+      happiness -= 0.5; // less public spending
+    }
+
+    // Building bonuses (yearly, per level owned)
+    final bl = state.buildingLevels;
+    int blv(String id) => bl[id] ?? 0;
+    // Energy buildings
+    gdpGrowth += blv('coal_plant') * 0.3;
+    happiness += blv('solar_farm') * 0.8;
+    // Military buildings
+    military += blv('military_base') * 0.5;
+    troops += blv('military_base') * 8.0;
+    milReadiness += blv('training_academy') * 0.8;
+    education += blv('training_academy') * 0.3;
+    military += blv('weapons_factory') * 0.8;
+    gdpGrowth += blv('weapons_factory') * 0.05;
+    // Food buildings
+    foodSec += blv('farm_complex') * 0.8;
+    gdpGrowth += blv('farm_complex') * 0.1;
+    foodSec += blv('granary') * 0.5;
+    stability += blv('granary') * 0.3;
+    foodSec += blv('irrigation') * 1.0;
+    happiness += blv('irrigation') * 0.3;
+    // Resource buildings
+    oilRes += blv('oil_refinery') * 0.8;
+    gdpGrowth += blv('oil_refinery') * 0.2;
+    natResources += blv('mine_complex') * 0.9;
+    gdpGrowth += blv('mine_complex') * 0.15;
+    natResources += blv('research_center') * 0.5;
+    education += blv('research_center') * 0.4;
+    gdpGrowth += blv('research_center') * 0.1;
+
     approval = _calcApproval(
       happiness: happiness,
       gdpGrowth: gdpGrowth,
@@ -87,6 +167,29 @@ class SimulationEngine {
 
     final newGdp = state.gdpBillion * (1 + gdpGrowth / 100);
     debt = (debt - gdpGrowth * 0.5).clamp(0.0, 200.0);
+
+    // ── Treasury: annual budget cycle ─────────────────────────
+    final taxIncome = state.gdpBillion * state.taxRate / 100;
+    final baseGovSpending = state.gdpBillion * 0.20;
+    final policySpending = state.activePolicies.fold(0.0, (sum, p) => sum + p.cost);
+    double buildingMaintenance = 0;
+    for (final b in BuildingsData.all) {
+      final lvl = state.buildingLevels[b.id] ?? 0;
+      if (lvl > 0) buildingMaintenance += lvl * b.moneyCostPerLevel * 0.02;
+    }
+    final netBudget = taxIncome - baseGovSpending - state.militaryBudget - policySpending - buildingMaintenance;
+    double treasury = state.treasury + netBudget;
+
+    // Deficit penalties
+    if (treasury < 0) {
+      gdpGrowth -= 0.3;
+      happiness -= 1.0;
+      debt = (debt + 2.0).clamp(0, 200);
+    }
+    if (treasury < -(state.gdpBillion * 0.1)) {
+      stability -= 0.5;
+      gdpGrowth -= 0.5;
+    }
 
     // ── Political Capital earned this year ────────────────────
     final capitalBase = (approval / 10).floor();                    // 0–10
@@ -113,6 +216,13 @@ class SimulationEngine {
       educationIndex: education.clamp(0.0, 100.0),
       healthcareIndex: healthcare.clamp(0.0, 100.0),
       diplomaticReputation: diplo.clamp(0.0, 100.0),
+      treasury: treasury,
+      foodSecurity: foodSec.clamp(0.0, 100.0),
+      agriculturalOutput: agriOut.clamp(0.0, state.gdpBillion * 0.5),
+      troopCount: troops.clamp(0.0, 10000.0),
+      militaryReadiness: milReadiness.clamp(0.0, 100.0),
+      naturalResourceIndex: natResources.clamp(0.0, 100.0),
+      oilReserves: oilRes.clamp(0.0, 100.0),
       politicalCapital: newCapital,
       approvalHistory: newApprovalHistory,
       gdpHistory: newGdpHistory,
@@ -136,6 +246,18 @@ class SimulationEngine {
     // Regression to mean — prevents lock at extremes
     delta += (50 - currentApproval) * 0.02;
     return (currentApproval + delta).clamp(0.0, 100.0);
+  }
+
+  static GameStateModel buildOrUpgrade(GameStateModel state, String buildingId) {
+    final building = BuildingsData.byId(buildingId);
+    if (building == null) return state;
+    final currentLevel = state.buildingLevels[buildingId] ?? 0;
+    if (currentLevel >= building.maxLevel) return state;
+    final newLevels = Map<String, int>.from(state.buildingLevels)
+      ..[buildingId] = currentLevel + 1;
+    final newCapital = (state.politicalCapital - building.capitalCostPerLevel).clamp(0, 999);
+    final newTreasury = state.treasury - building.moneyCostPerLevel;
+    return state.copyWith(buildingLevels: newLevels, politicalCapital: newCapital, treasury: newTreasury);
   }
 
   static bool canAffordPolicy(GameStateModel state, PolicyModel policy) =>
@@ -186,6 +308,16 @@ class SimulationEngine {
         return s.copyWith(stability: (s.stability + delta).clamp(0, 100));
       case 'Corruption':
         return s.copyWith(corruption: (s.corruption - delta).clamp(0, 100));
+      case 'Food Security':
+        return s.copyWith(foodSecurity: (s.foodSecurity + delta).clamp(0, 100));
+      case 'Natural Resources':
+        return s.copyWith(naturalResourceIndex: (s.naturalResourceIndex + delta).clamp(0, 100));
+      case 'Oil Reserves':
+        return s.copyWith(oilReserves: (s.oilReserves + delta).clamp(0, 100));
+      case 'Troops':
+        return s.copyWith(troopCount: (s.troopCount + delta).clamp(0, 10000));
+      case 'Military Readiness':
+        return s.copyWith(militaryReadiness: (s.militaryReadiness + delta).clamp(0, 100));
       default:
         return s;
     }
@@ -210,5 +342,52 @@ class SimulationEngine {
     if (avg >= 35) return 'Controversial Figure';
     if (avg >= 20) return 'Remembered Poorly';
     return 'Worst Leader in History';
+  }
+
+  // ── Diplomacy actions ─────────────────────────────────────────────────────
+
+  static const int allianceCost    = 8;  // 💎 to propose
+  static const int breakCost       = 4;  // 💎 to break
+  static const int sanctionCost    = 5;  // 💎 to impose
+  static const int liftCost        = 3;  // 💎 to lift
+
+  static GameStateModel proposeAlliance(GameStateModel state, String countryName) {
+    final allied = [...state.alliedCountries, countryName];
+    return state.copyWith(
+      alliedCountries: allied,
+      politicalCapital: (state.politicalCapital - allianceCost).clamp(0, 999),
+      diplomaticReputation: (state.diplomaticReputation + 6).clamp(0, 100),
+      gdpGrowthRate: (state.gdpGrowthRate + 0.4).clamp(-15, 15),
+      happiness: (state.happiness + 2).clamp(0, 100),
+      stability: (state.stability + 1.5).clamp(0, 100),
+    );
+  }
+
+  static GameStateModel breakAlliance(GameStateModel state, String countryName) {
+    final allied = state.alliedCountries.where((c) => c != countryName).toList();
+    return state.copyWith(
+      alliedCountries: allied,
+      politicalCapital: (state.politicalCapital - breakCost).clamp(0, 999),
+      diplomaticReputation: (state.diplomaticReputation - 8).clamp(0, 100),
+      gdpGrowthRate: (state.gdpGrowthRate - 0.3).clamp(-15, 15),
+    );
+  }
+
+  static GameStateModel imposeSanction(GameStateModel state, String countryName) {
+    final sanctioned = [...state.sanctionedCountries, countryName];
+    return state.copyWith(
+      sanctionedCountries: sanctioned,
+      politicalCapital: (state.politicalCapital - sanctionCost).clamp(0, 999),
+      diplomaticReputation: (state.diplomaticReputation - 4).clamp(0, 100),
+    );
+  }
+
+  static GameStateModel liftSanction(GameStateModel state, String countryName) {
+    final sanctioned = state.sanctionedCountries.where((c) => c != countryName).toList();
+    return state.copyWith(
+      sanctionedCountries: sanctioned,
+      politicalCapital: (state.politicalCapital - liftCost).clamp(0, 999),
+      diplomaticReputation: (state.diplomaticReputation + 3).clamp(0, 100),
+    );
   }
 }

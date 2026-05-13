@@ -908,6 +908,14 @@ class CountriesData {
     }
   }
 
+  static CountryModel? byName(String name) {
+    try {
+      return all.firstWhere((c) => c.name == name);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static List<CountryModel> search(String query) {
     final q = query.toLowerCase();
     return all.where((c) =>

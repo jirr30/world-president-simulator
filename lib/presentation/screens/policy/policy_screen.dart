@@ -43,45 +43,62 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
           onPressed: () => context.go('/dashboard'),
         ),
         actions: [
-          if (game != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('💎', style: TextStyle(fontSize: 14)),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${game.politicalCapital}',
-                        style: const TextStyle(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w800,
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                        ),
+          if (game != null) ...[
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: (game.treasuryIsNegative ? AppColors.danger : AppColors.economy).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: (game.treasuryIsNegative ? AppColors.danger : AppColors.economy).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🪙', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
+                    Text(
+                      game.treasuryFormatted,
+                      style: TextStyle(
+                        color: game.treasuryIsNegative ? AppColors.danger : AppColors.economy,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
                       ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Capital',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
+            const SizedBox(width: 6),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('💎', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${game.politicalCapital}',
+                      style: const TextStyle(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
         ],
         bottom: TabBar(
           controller: _tabs,
@@ -373,13 +390,16 @@ class _PolicyCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     if (policy.cost > 0) ...[
-                      const Icon(Icons.attach_money_rounded, color: AppColors.textMuted, size: 14),
-                      Text(
-                        '\$${policy.cost.toStringAsFixed(0)}B/yr',
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                          fontFamily: 'Poppins',
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.economy.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: AppColors.economy.withValues(alpha: 0.25)),
+                        ),
+                        child: Text(
+                          '🪙 \$${policy.cost.toStringAsFixed(0)}B/yr',
+                          style: const TextStyle(color: AppColors.economy, fontSize: 11, fontFamily: 'Poppins', fontWeight: FontWeight.w600),
                         ),
                       ),
                       const SizedBox(width: 8),

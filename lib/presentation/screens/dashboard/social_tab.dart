@@ -49,12 +49,106 @@ class SocialTab extends StatelessWidget {
               color: game.corruption < 30 ? AppColors.economy : game.corruption < 60 ? AppColors.warning : AppColors.danger,
               progress: game.corruption / 100,
             ),
+            StatCard(
+              label: 'Food Security',
+              value: '${game.foodSecurity.toStringAsFixed(0)}/100',
+              icon: Icons.restaurant_rounded,
+              color: game.foodSecurity > 60
+                  ? AppColors.food
+                  : game.foodSecurity > 35
+                      ? AppColors.warning
+                      : AppColors.danger,
+              progress: game.foodSecurity / 100,
+            ),
+            StatCard(
+              label: 'Agri. Output',
+              value: game.agriculturalOutput >= 1000
+                  ? '\$${(game.agriculturalOutput / 1000).toStringAsFixed(1)}T'
+                  : '\$${game.agriculturalOutput.toStringAsFixed(0)}B',
+              icon: Icons.agriculture_rounded,
+              color: AppColors.food,
+            ),
           ],
         ),
         const SizedBox(height: 20),
+        _FoodStatusCard(game: game),
+        const SizedBox(height: 16),
         _PopulationCard(game: game),
         const SizedBox(height: 80),
       ],
+    );
+  }
+}
+
+class _FoodStatusCard extends StatelessWidget {
+  final GameStateModel game;
+
+  const _FoodStatusCard({required this.game});
+
+  String get _status {
+    final f = game.foodSecurity;
+    if (f >= 80) return 'Food Surplus';
+    if (f >= 60) return 'Food Secure';
+    if (f >= 40) return 'Moderate Risk';
+    if (f >= 20) return 'Food Insecure';
+    return 'Famine Crisis';
+  }
+
+  String get _emoji {
+    final f = game.foodSecurity;
+    if (f >= 80) return '🌾';
+    if (f >= 60) return '🥗';
+    if (f >= 40) return '⚠️';
+    if (f >= 20) return '🍽️';
+    return '🆘';
+  }
+
+  Color _color(BuildContext context) {
+    final f = game.foodSecurity;
+    if (f >= 60) return AppColors.food;
+    if (f >= 40) return AppColors.warning;
+    return AppColors.danger;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Text(_emoji, style: const TextStyle(fontSize: 36)),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Food & Agriculture Status',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _status,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

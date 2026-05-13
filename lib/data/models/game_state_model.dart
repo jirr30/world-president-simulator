@@ -25,6 +25,16 @@ class GameStateModel {
   final double militaryStrength; // 0–100
   final double militaryBudget; // billion USD
   final bool atWar;
+  final double troopCount; // thousands of active personnel
+  final double militaryReadiness; // 0–100 equipment & training readiness
+
+  // Food & Agriculture
+  final double foodSecurity; // 0–100
+  final double agriculturalOutput; // billion USD
+
+  // Natural Resources
+  final double naturalResourceIndex; // 0–100 overall resource wealth
+  final double oilReserves; // 0–100 strategic oil/energy reserves
 
   // Social Stats
   final double educationIndex; // 0–100
@@ -36,8 +46,14 @@ class GameStateModel {
   final List<String> alliedCountries;
   final List<String> sanctionedCountries;
 
+  // Treasury — government's spendable cash balance (billion USD)
+  final double treasury;
+
   // Applied Policies
   final List<PolicyModel> activePolicies;
+
+  // Infrastructure buildings (buildingId → level, 0 = not built)
+  final Map<String, int> buildingLevels;
 
   // Political Capital (earned from approval, spent on policies)
   final int politicalCapital;
@@ -64,17 +80,39 @@ class GameStateModel {
     required this.militaryStrength,
     required this.militaryBudget,
     this.atWar = false,
+    this.troopCount = 100,
+    this.militaryReadiness = 50,
+    this.foodSecurity = 50,
+    this.agriculturalOutput = 0,
+    this.naturalResourceIndex = 50,
+    this.oilReserves = 40,
     required this.educationIndex,
     required this.healthcareIndex,
     required this.literacyRate,
     required this.diplomaticReputation,
     this.alliedCountries = const [],
     this.sanctionedCountries = const [],
+    this.treasury = 0,
     this.activePolicies = const [],
+    this.buildingLevels = const {},
     this.politicalCapital = 20,
     this.approvalHistory = const [],
     this.gdpHistory = const [],
   });
+
+  String get troopCountFormatted {
+    if (troopCount >= 1000) return '${(troopCount / 1000).toStringAsFixed(1)}M';
+    return '${troopCount.toStringAsFixed(0)}K';
+  }
+
+  String get treasuryFormatted {
+    final abs = treasury.abs();
+    final sign = treasury < 0 ? '-' : '';
+    if (abs >= 1000) return '$sign\$${(abs / 1000).toStringAsFixed(1)}T';
+    return '$sign\$${abs.toStringAsFixed(0)}B';
+  }
+
+  bool get treasuryIsNegative => treasury < 0;
 
   int get yearsInOffice => currentYear - termStartYear;
   int get yearsRemaining => termDurationYears - yearsInOffice;
@@ -113,13 +151,21 @@ class GameStateModel {
     double? militaryStrength,
     double? militaryBudget,
     bool? atWar,
+    double? troopCount,
+    double? militaryReadiness,
+    double? foodSecurity,
+    double? agriculturalOutput,
+    double? naturalResourceIndex,
+    double? oilReserves,
     double? educationIndex,
     double? healthcareIndex,
     double? literacyRate,
     double? diplomaticReputation,
     List<String>? alliedCountries,
     List<String>? sanctionedCountries,
+    double? treasury,
     List<PolicyModel>? activePolicies,
+    Map<String, int>? buildingLevels,
     int? politicalCapital,
     List<double>? approvalHistory,
     List<double>? gdpHistory,
@@ -142,13 +188,21 @@ class GameStateModel {
       militaryStrength: militaryStrength ?? this.militaryStrength,
       militaryBudget: militaryBudget ?? this.militaryBudget,
       atWar: atWar ?? this.atWar,
+      troopCount: troopCount ?? this.troopCount,
+      militaryReadiness: militaryReadiness ?? this.militaryReadiness,
+      foodSecurity: foodSecurity ?? this.foodSecurity,
+      agriculturalOutput: agriculturalOutput ?? this.agriculturalOutput,
+      naturalResourceIndex: naturalResourceIndex ?? this.naturalResourceIndex,
+      oilReserves: oilReserves ?? this.oilReserves,
       educationIndex: educationIndex ?? this.educationIndex,
       healthcareIndex: healthcareIndex ?? this.healthcareIndex,
       literacyRate: literacyRate ?? this.literacyRate,
       diplomaticReputation: diplomaticReputation ?? this.diplomaticReputation,
       alliedCountries: alliedCountries ?? this.alliedCountries,
       sanctionedCountries: sanctionedCountries ?? this.sanctionedCountries,
+      treasury: treasury ?? this.treasury,
       activePolicies: activePolicies ?? this.activePolicies,
+      buildingLevels: buildingLevels ?? this.buildingLevels,
       politicalCapital: politicalCapital ?? this.politicalCapital,
       approvalHistory: approvalHistory ?? this.approvalHistory,
       gdpHistory: gdpHistory ?? this.gdpHistory,

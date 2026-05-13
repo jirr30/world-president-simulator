@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/datasources/buildings_data.dart';
 import '../../../data/datasources/country_coordinates.dart';
 import '../../../data/datasources/countries_data.dart';
 import '../../../data/datasources/events_data.dart';
 import '../../../data/models/country_model.dart';
 import '../../../data/models/game_state_model.dart';
+import '../../../services/simulation_engine.dart';
 import '../../providers/game_provider.dart';
 
 class MapGameScreen extends ConsumerStatefulWidget {
@@ -20,6 +22,8 @@ class MapGameScreen extends ConsumerStatefulWidget {
 class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   String? _tappedCountryId;
   bool _showStatsPanel = false;
+  bool _showTutorial = false;
+  bool _tutorialChecked = false;
   Size _mapSize = Size.zero;
   Offset? _pendingTapMap; // in map coordinates (set by GestureDetector inside InteractiveViewer)
   late final TransformationController _transformController;
@@ -115,16 +119,52 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   }
 
   void _onAdvanceYear(GameStateModel game) {
-    final state = ref.read(gameProvider.notifier).advanceYear();
-    if (state.isTermOver) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _AdvanceConfirmSheet(
+        game: game,
+        onConfirm: () {
+          Navigator.pop(context);
+          _doAdvanceYear(game);
+        },
+      ),
+    );
+  }
+
+  void _doAdvanceYear(GameStateModel oldGame) {
+    final newState = ref.read(gameProvider.notifier).advanceYear();
+
+    if (newState.approvalRating <= 15.0) {
+      context.go('/gameover', extra: 'impeached');
+      return;
+    }
+    if (newState.isTermOver) {
       context.go('/gameover');
       return;
     }
+
+    // Show year summary, then trigger events after dismiss
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: true,
+      builder: (_) => _YearSummarySheet(
+        oldGame: oldGame,
+        newGame: newState,
+        onDone: () {
+          Navigator.pop(context);
+          _triggerEvent(newState);
+        },
+      ),
+    ).then((_) => _triggerEvent(newState));
+  }
+
+  void _triggerEvent(GameStateModel state) {
     if (state.currentYear % 3 != 0) {
-      final events = EventsData.getRandomEvents(
-        count: 1,
-        continent: state.country.continent,
-      );
+      final events = EventsData.getRandomEvents(count: 1, continent: state.country.continent);
       if (events.isNotEmpty) {
         ref.read(pendingEventProvider.notifier).state = events.first;
         context.go('/event');
@@ -142,6 +182,16 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       );
     }
 
+    // Show tutorial on first play
+    if (!_tutorialChecked) {
+      _tutorialChecked = true;
+      if (game.yearsInOffice == 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _showTutorial = true);
+        });
+      }
+    }
+
     final approvalColor = AppColors.approvalColor(game.approvalRating);
 
     CountryModel? tappedCountry;
@@ -152,7 +202,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     final isPlayerTapped = _tappedCountryId == game.country.id;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1628),
+      backgroundColor: const Color(0xFF0C2340),
       body: Stack(
         children: [
           // ── 1. Fullscreen interactive map ──────────────────────
@@ -193,6 +243,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
               game: game,
               showingStats: _showStatsPanel,
               onHome: () => _confirmLeave(context),
+              onBuildings: () => context.go('/buildings'),
+              onTreasury: () => _showTreasurySheet(context, game),
               onToggleStats: () => setState(() {
                 _showStatsPanel = !_showStatsPanel;
                 if (_showStatsPanel) _tappedCountryId = null;
@@ -200,7 +252,14 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
             ),
           ),
 
-          // ── 3. Bottom HUD ──────────────────────────────────────
+          // ── 3. Critical approval banner ────────────────────────
+          if (game.approvalRating <= 20.0)
+            Positioned(
+              bottom: 62, left: 56, right: 12,
+              child: _CriticalApprovalBanner(approval: game.approvalRating),
+            ),
+
+          // ── 4. Bottom HUD ──────────────────────────────────────
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: _BottomHud(
@@ -268,8 +327,25 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
               onClose: () => setState(() => _showStatsPanel = false),
             ),
           ),
+
+          // ── 7. Tutorial overlay (first play) ───────────────────
+          if (_showTutorial)
+            Positioned.fill(
+              child: _TutorialOverlay(
+                onDone: () => setState(() => _showTutorial = false),
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  void _showTreasurySheet(BuildContext context, GameStateModel game) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TreasurySheet(game: game),
     );
   }
 
@@ -338,12 +414,16 @@ class _TopHud extends StatelessWidget {
   final bool showingStats;
   final VoidCallback onHome;
   final VoidCallback onToggleStats;
+  final VoidCallback onBuildings;
+  final VoidCallback onTreasury;
 
   const _TopHud({
     required this.game,
     required this.showingStats,
     required this.onHome,
     required this.onToggleStats,
+    required this.onBuildings,
+    required this.onTreasury,
   });
 
   @override
@@ -399,7 +479,35 @@ class _TopHud extends StatelessWidget {
             ),
           ),
           const Icon(Icons.save_rounded, size: 13, color: AppColors.textMuted),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onTreasury,
+            child: _TreasuryBadge(treasury: game.treasury, tappable: true),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: onBuildings,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0x44071020),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_city_rounded, color: AppColors.resources, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Build',
+                    style: TextStyle(color: AppColors.resources, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
           GestureDetector(
             onTap: onToggleStats,
             child: Container(
@@ -448,7 +556,7 @@ class _TopHud extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Bottom HUD
 // ─────────────────────────────────────────────────────────────────────────────
-class _BottomHud extends StatelessWidget {
+class _BottomHud extends StatefulWidget {
   final GameStateModel game;
   final Color approvalColor;
   final VoidCallback onPolicies;
@@ -462,7 +570,37 @@ class _BottomHud extends StatelessWidget {
   });
 
   @override
+  State<_BottomHud> createState() => _BottomHudState();
+}
+
+class _BottomHudState extends State<_BottomHud>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _pulse = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final game = widget.game;
+    final approvalColor = widget.approvalColor;
+    final isWarning = game.approvalRating <= 25.0;
+    final isCritical = game.approvalRating <= 18.0;
+
     final gdpStr = game.gdpBillion >= 1000
         ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
         : '\$${game.gdpBillion.toStringAsFixed(0)}B';
@@ -478,29 +616,68 @@ class _BottomHud extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(56, 18, 12, 8),
       child: Row(
         children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${game.approvalRating.toStringAsFixed(0)}%',
-                style: TextStyle(
-                  color: approvalColor,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  fontFamily: 'Poppins',
-                  height: 1.0,
+          // Approval display with pulse when at risk
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (_, __) {
+              final glowAlpha = isWarning ? (_pulse.value * 0.35) : 0.0;
+              return Container(
+                padding: isWarning
+                    ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
+                    : EdgeInsets.zero,
+                decoration: isWarning
+                    ? BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: glowAlpha * 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.danger.withValues(alpha: glowAlpha + 0.2),
+                          width: 1.5,
+                        ),
+                      )
+                    : null,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isWarning) ...[
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: AppColors.danger.withValues(alpha: 0.6 + _pulse.value * 0.4),
+                            size: 13,
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        Text(
+                          '${game.approvalRating.toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            color: approvalColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Poppins',
+                            height: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isCritical ? 'IMPEACH RISK' : isWarning ? 'Low Approval' : 'Approval',
+                      style: TextStyle(
+                        color: isWarning
+                            ? AppColors.danger.withValues(alpha: 0.55 + _pulse.value * 0.45)
+                            : approvalColor.withValues(alpha: 0.65),
+                        fontSize: 9,
+                        fontFamily: 'Poppins',
+                        fontWeight: isWarning ? FontWeight.w700 : FontWeight.normal,
+                        letterSpacing: isCritical ? 0.8 : 0,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                'Approval',
-                style: TextStyle(
-                  color: approvalColor.withValues(alpha: 0.65),
-                  fontSize: 9,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(width: 10),
           Container(width: 1, height: 28, color: AppColors.cardBorder),
@@ -526,7 +703,7 @@ class _BottomHud extends StatelessWidget {
           _CapitalChip(capital: game.politicalCapital),
           const Spacer(),
           OutlinedButton.icon(
-            onPressed: onPolicies,
+            onPressed: widget.onPolicies,
             icon: const Icon(Icons.policy_rounded,
                 size: 14, color: AppColors.accent),
             label: const Text(
@@ -548,7 +725,7 @@ class _BottomHud extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
-            onPressed: onAdvanceYear,
+            onPressed: widget.onAdvanceYear,
             icon: const Icon(Icons.skip_next_rounded,
                 size: 15, color: AppColors.background),
             label: Text(
@@ -575,6 +752,104 @@ class _BottomHud extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Critical approval banner
+// ─────────────────────────────────────────────────────────────────────────────
+class _CriticalApprovalBanner extends StatefulWidget {
+  final double approval;
+
+  const _CriticalApprovalBanner({required this.approval});
+
+  @override
+  State<_CriticalApprovalBanner> createState() => _CriticalApprovalBannerState();
+}
+
+class _CriticalApprovalBannerState extends State<_CriticalApprovalBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))
+      ..repeat(reverse: true);
+    _pulse = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = (widget.approval - 15.0).clamp(0.0, 5.0);
+    final label = remaining <= 1
+        ? 'CRITICAL — Advance year to trigger impeachment!'
+        : 'Approval dangerously low — impeached at 15%';
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, __) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.15 + _pulse.value * 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.danger.withValues(alpha: 0.5 + _pulse.value * 0.4),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.gavel_rounded,
+              color: AppColors.danger.withValues(alpha: 0.7 + _pulse.value * 0.3),
+              size: 14,
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.danger.withValues(alpha: 0.8 + _pulse.value * 0.2),
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.25 + _pulse.value * 0.15),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                '${widget.approval.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  color: AppColors.danger.withValues(alpha: 0.9 + _pulse.value * 0.1),
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HUD chips
+// ─────────────────────────────────────────────────────────────────────────────
 class _HudChip extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -625,6 +900,48 @@ class _HudChip extends StatelessWidget {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TreasuryBadge extends StatelessWidget {
+  final double treasury;
+  final bool tappable;
+  const _TreasuryBadge({required this.treasury, this.tappable = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final isNeg = treasury < 0;
+    final color = isNeg ? AppColors.danger : AppColors.economy;
+    final abs = treasury.abs();
+    final label = abs >= 1000
+        ? '${isNeg ? '-' : ''}\$${(abs / 1000).toStringAsFixed(1)}T'
+        : '${isNeg ? '-' : ''}\$${abs.toStringAsFixed(0)}B';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🪙', style: TextStyle(fontSize: 11, height: 1.1)),
+          const SizedBox(width: 3),
+          Text(label,
+              style: TextStyle(
+                  color: color,
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1)),
+          if (tappable) ...[
+            const SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down_rounded, color: color, size: 12),
+          ],
         ],
       ),
     );
@@ -684,7 +1001,7 @@ class _CapitalChip extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Country Info Panel
 // ─────────────────────────────────────────────────────────────────────────────
-class _CountryPanel extends StatelessWidget {
+class _CountryPanel extends ConsumerWidget {
   final CountryModel country;
   final GameStateModel game;
   final bool isPlayer;
@@ -698,11 +1015,14 @@ class _CountryPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isAlly = game.alliedCountries.contains(country.name) ||
-        game.country.allies.contains(country.name);
-    final isRival = game.sanctionedCountries.contains(country.name) ||
-        game.country.rivals.contains(country.name);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playerAlly    = game.alliedCountries.contains(country.name);
+    final nativeAlly    = game.country.allies.contains(country.name);
+    final playerSanction = game.sanctionedCountries.contains(country.name);
+    final nativeRival   = game.country.rivals.contains(country.name);
+
+    final isAlly  = playerAlly  || nativeAlly;
+    final isRival = playerSanction || nativeRival;
 
     final Color relationColor;
     final String relationLabel;
@@ -711,13 +1031,33 @@ class _CountryPanel extends StatelessWidget {
       relationLabel = 'Your Nation';
     } else if (isAlly) {
       relationColor = const Color(0xFF4CAF50);
-      relationLabel = 'Allied';
+      relationLabel = playerAlly ? 'Allied' : 'Historic Ally';
     } else if (isRival) {
       relationColor = AppColors.danger;
-      relationLabel = 'Rival';
+      relationLabel = playerSanction ? 'Sanctioned' : 'Rival';
     } else {
       relationColor = AppColors.textSecondary;
       relationLabel = 'Neutral';
+    }
+
+    final capital = game.politicalCapital;
+
+    void doAction(VoidCallback action, String successMsg, Color color) {
+      action();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(successMsg, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ));
+    }
+
+    void notEnoughCapital(int need) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('💎 Not enough Political Capital (need $need, have $capital)',
+            style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.danger,
+        duration: const Duration(seconds: 2),
+      ));
     }
 
     return Container(
@@ -739,14 +1079,13 @@ class _CountryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header ──────────────────────────────────────────
           Container(
             padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
             decoration: BoxDecoration(
               color: relationColor.withValues(alpha: 0.07),
-              borderRadius:
-                  const BorderRadius.only(topLeft: Radius.circular(16)),
-              border: const Border(
-                  bottom: BorderSide(color: AppColors.cardBorder)),
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16)),
+              border: const Border(bottom: BorderSide(color: AppColors.cardBorder)),
             ),
             child: Row(
               children: [
@@ -769,75 +1108,148 @@ class _CountryPanel extends StatelessWidget {
                       ),
                       Text(
                         country.continent,
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 10,
-                          fontFamily: 'Poppins',
-                        ),
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Poppins'),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
                     color: relationColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                        color: relationColor.withValues(alpha: 0.4)),
+                    border: Border.all(color: relationColor.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     relationLabel,
-                    style: TextStyle(
-                      color: relationColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Poppins',
-                    ),
+                    style: TextStyle(color: relationColor, fontSize: 9, fontWeight: FontWeight.w700, fontFamily: 'Poppins'),
                   ),
                 ),
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onClose,
-                  child: const Icon(Icons.close_rounded,
-                      color: AppColors.textMuted, size: 18),
+                  child: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 18),
                 ),
               ],
             ),
           ),
+
+          // ── Country info ─────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _PanelRow('Capital', country.capital,
-                      Icons.location_city_rounded),
-                  _PanelRow('Government', _govLabel(country.governmentType),
-                      Icons.account_balance_rounded),
-                  _PanelRow('Population', country.populationFormatted,
-                      Icons.people_rounded),
-                  _PanelRow('GDP', country.gdpFormatted,
-                      Icons.trending_up_rounded),
-                  _PanelRow('GDP / Capita',
-                      '\$${country.gdpPerCapita.toStringAsFixed(0)}',
-                      Icons.attach_money_rounded),
-                  _PanelRow('HDI',
-                      country.humanDevelopmentIndex.toStringAsFixed(3),
-                      Icons.school_rounded),
-                  _PanelRow('Literacy',
-                      '${(country.literacyRate * 100).toStringAsFixed(0)}%',
-                      Icons.menu_book_rounded),
-                  _PanelRow('Unemployment',
-                      '${country.unemploymentRate.toStringAsFixed(1)}%',
-                      Icons.work_off_rounded),
+                  _PanelRow('Capital', country.capital, Icons.location_city_rounded),
+                  _PanelRow('Government', _govLabel(country.governmentType), Icons.account_balance_rounded),
+                  _PanelRow('Population', country.populationFormatted, Icons.people_rounded),
+                  _PanelRow('GDP', country.gdpFormatted, Icons.trending_up_rounded),
+                  _PanelRow('GDP / Capita', '\$${country.gdpPerCapita.toStringAsFixed(0)}', Icons.attach_money_rounded),
+                  _PanelRow('HDI', country.humanDevelopmentIndex.toStringAsFixed(3), Icons.school_rounded),
+                  _PanelRow('Literacy', '${(country.literacyRate * 100).toStringAsFixed(0)}%', Icons.menu_book_rounded),
+                  _PanelRow('Unemployment', '${country.unemploymentRate.toStringAsFixed(1)}%', Icons.work_off_rounded),
                   if (country.allies.isNotEmpty)
-                    _PanelRow('Allies', country.allies.take(3).join(', '),
-                        Icons.handshake_rounded),
+                    _PanelRow('Allies', country.allies.take(3).join(', '), Icons.handshake_rounded),
                 ],
               ),
             ),
           ),
+
+          // ── Diplomacy actions ────────────────────────────────
+          if (!isPlayer) ...[
+            const Divider(height: 1, color: AppColors.cardBorder),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'DIPLOMACY',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 9, fontFamily: 'Poppins', fontWeight: FontWeight.w700, letterSpacing: 1.5),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Alliance actions
+                  if (playerAlly) ...[
+                    _DiplomacyButton(
+                      icon: Icons.handshake_rounded,
+                      label: 'Break Alliance',
+                      sub: '💎${SimulationEngine.breakCost} · −8 reputation',
+                      color: AppColors.warning,
+                      canAfford: capital >= SimulationEngine.breakCost,
+                      onTap: () => doAction(
+                        () => ref.read(gameProvider.notifier).breakAlliance(country.name),
+                        '🤝 Alliance with ${country.name} ended.',
+                        AppColors.warning,
+                      ),
+                      onNoCapital: () => notEnoughCapital(SimulationEngine.breakCost),
+                    ),
+                  ] else if (nativeAlly) ...[
+                    _DiplomacyInfo(
+                      icon: Icons.handshake_rounded,
+                      label: 'Historic Ally — cannot break',
+                      color: const Color(0xFF4CAF50),
+                    ),
+                  ] else if (!isRival) ...[
+                    _DiplomacyButton(
+                      icon: Icons.handshake_rounded,
+                      label: 'Propose Alliance',
+                      sub: '💎${SimulationEngine.allianceCost} · +6 rep · +0.4% GDP',
+                      color: const Color(0xFF4CAF50),
+                      canAfford: capital >= SimulationEngine.allianceCost,
+                      requireRep: game.diplomaticReputation < 30,
+                      onTap: () => doAction(
+                        () => ref.read(gameProvider.notifier).proposeAlliance(country.name),
+                        '🤝 Alliance formed with ${country.name}!',
+                        const Color(0xFF4CAF50),
+                      ),
+                      onNoCapital: () => notEnoughCapital(SimulationEngine.allianceCost),
+                    ),
+                  ],
+
+                  const SizedBox(height: 6),
+
+                  // Sanction actions
+                  if (playerSanction) ...[
+                    _DiplomacyButton(
+                      icon: Icons.gavel_rounded,
+                      label: 'Lift Sanctions',
+                      sub: '💎${SimulationEngine.liftCost} · +3 reputation',
+                      color: AppColors.diplomacy,
+                      canAfford: capital >= SimulationEngine.liftCost,
+                      onTap: () => doAction(
+                        () => ref.read(gameProvider.notifier).liftSanction(country.name),
+                        '✅ Sanctions on ${country.name} lifted.',
+                        AppColors.diplomacy,
+                      ),
+                      onNoCapital: () => notEnoughCapital(SimulationEngine.liftCost),
+                    ),
+                  ] else if (nativeRival) ...[
+                    _DiplomacyInfo(
+                      icon: Icons.gavel_rounded,
+                      label: 'Historic Rival — sanctions fixed',
+                      color: AppColors.danger,
+                    ),
+                  ] else if (!isAlly) ...[
+                    _DiplomacyButton(
+                      icon: Icons.gavel_rounded,
+                      label: 'Impose Sanctions',
+                      sub: '💎${SimulationEngine.sanctionCost} · −4 rep · trade hit',
+                      color: AppColors.danger,
+                      canAfford: capital >= SimulationEngine.sanctionCost,
+                      onTap: () => doAction(
+                        () => ref.read(gameProvider.notifier).imposeSanction(country.name),
+                        '⚠️ Sanctions imposed on ${country.name}.',
+                        AppColors.danger,
+                      ),
+                      onNoCapital: () => notEnoughCapital(SimulationEngine.sanctionCost),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -857,6 +1269,105 @@ class _CountryPanel extends StatelessWidget {
       'military_junta': 'Military Junta',
     };
     return labels[type] ?? type.replaceAll('_', ' ');
+  }
+}
+
+class _DiplomacyButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sub;
+  final Color color;
+  final bool canAfford;
+  final bool requireRep;
+  final VoidCallback onTap;
+  final VoidCallback onNoCapital;
+
+  const _DiplomacyButton({
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.color,
+    required this.canAfford,
+    required this.onTap,
+    required this.onNoCapital,
+    this.requireRep = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = !canAfford || requireRep;
+    return GestureDetector(
+      onTap: disabled ? (canAfford ? null : onNoCapital) : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: disabled ? AppColors.cardBorder.withValues(alpha: 0.3) : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: disabled ? AppColors.cardBorder : color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: disabled ? AppColors.textMuted : color, size: 15),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    requireRep ? '$label (need 30+ rep)' : label,
+                    style: TextStyle(
+                      color: disabled ? AppColors.textMuted : color,
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    sub,
+                    style: TextStyle(
+                      color: (disabled ? AppColors.textMuted : color).withValues(alpha: 0.7),
+                      fontFamily: 'Poppins',
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DiplomacyInfo extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _DiplomacyInfo({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color.withValues(alpha: 0.5), size: 13),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: color.withValues(alpha: 0.6), fontFamily: 'Poppins', fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -985,6 +1496,9 @@ class _StatsPanel extends StatelessWidget {
                     approvalColor, Icons.thumb_up_rounded),
                 _Row('Political Capital', '💎 ${game.politicalCapital}',
                     AppColors.accent, Icons.star_rounded),
+                _Row('Treasury', game.treasuryFormatted,
+                    game.treasuryIsNegative ? AppColors.danger : AppColors.economy,
+                    Icons.monetization_on_rounded),
                 const SizedBox(height: 10),
                 _Section('Economy'),
                 _Row('GDP', gdpStr, AppColors.economy,
@@ -1137,6 +1651,228 @@ class _Row extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Treasury detail bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+class _TreasurySheet extends StatelessWidget {
+  final GameStateModel game;
+  const _TreasurySheet({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    // Budget calculations
+    final taxIncome = game.gdpBillion * game.taxRate / 100;
+    final baseSpending = game.gdpBillion * 0.20;
+    final policySpending = game.activePolicies.fold(0.0, (s, p) => s + p.cost);
+    double buildingMaint = 0;
+    for (final b in BuildingsData.all) {
+      final lvl = game.buildingLevels[b.id] ?? 0;
+      if (lvl > 0) buildingMaint += lvl * b.moneyCostPerLevel * 0.02;
+    }
+    final netPerYear = taxIncome - baseSpending - game.militaryBudget - policySpending - buildingMaint;
+    final isNeg = game.treasury < 0;
+    final balColor = isNeg ? AppColors.danger : AppColors.economy;
+    final netColor = netPerYear >= 0 ? AppColors.economy : AppColors.danger;
+
+    String fmt(double v) {
+      final abs = v.abs();
+      final sign = v < 0 ? '-' : '+';
+      if (abs >= 1000) return '$sign\$${(abs / 1000).toStringAsFixed(1)}T';
+      return '$sign\$${abs.toStringAsFixed(0)}B';
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Header row
+          Row(
+            children: [
+              const Text('🪙', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Treasury & Budget',
+                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 17)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 20),
+                onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Balance card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: balColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: balColor.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Current Balance', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+                    const SizedBox(height: 2),
+                    Text(game.treasuryFormatted,
+                        style: TextStyle(color: balColor, fontWeight: FontWeight.w800, fontFamily: 'Poppins', fontSize: 28)),
+                  ],
+                ),
+                const Spacer(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Net / year', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10)),
+                    const SizedBox(height: 2),
+                    Text(fmt(netPerYear),
+                        style: TextStyle(color: netColor, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 16)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          if (isNeg) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 14),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text('Treasury defisit — GDP growth dan happiness terdampak',
+                        style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 18),
+          const Text('RINCIAN ANGGARAN',
+              style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+
+          // Income
+          _SheetBudgetRow(Icons.arrow_downward_rounded, 'Pendapatan Pajak', taxIncome, AppColors.economy,
+              sub: 'GDP \$${game.gdpBillion >= 1000 ? '${(game.gdpBillion / 1000).toStringAsFixed(1)}T' : '${game.gdpBillion.toStringAsFixed(0)}B'} × ${game.taxRate.toStringAsFixed(0)}%'),
+          const _SheetDivider(),
+
+          // Expenses
+          _SheetBudgetRow(Icons.arrow_upward_rounded, 'Belanja Pemerintah', -baseSpending, AppColors.danger, sub: '20% dari GDP'),
+          _SheetBudgetRow(Icons.shield_rounded, 'Anggaran Militer', -game.militaryBudget, AppColors.military),
+          if (policySpending > 0)
+            _SheetBudgetRow(Icons.policy_rounded, 'Kebijakan Aktif (${game.activePolicies.length})', -policySpending, AppColors.social,
+                sub: 'biaya tahunan gabungan'),
+          if (buildingMaint > 0)
+            _SheetBudgetRow(Icons.location_city_rounded, 'Perawatan Bangunan', -buildingMaint, AppColors.resources,
+                sub: '2%/lv/tahun'),
+          const SizedBox(height: 8),
+
+          // Net bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: netColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: netColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Net per tahun', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(fmt(netPerYear), style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetBudgetRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double value;
+  final Color color;
+  final String? sub;
+
+  const _SheetBudgetRow(this.icon, this.label, this.value, this.color, {this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    final abs = value.abs();
+    final sign = value >= 0 ? '+' : '-';
+    final formatted = abs >= 1000
+        ? '$sign\$${(abs / 1000).toStringAsFixed(1)}T'
+        : '$sign\$${abs.toStringAsFixed(0)}B';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 15),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500)),
+                if (sub != null)
+                  Text(sub!, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10)),
+              ],
+            ),
+          ),
+          Text(formatted,
+              style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetDivider extends StatelessWidget {
+  const _SheetDivider();
+  @override
+  Widget build(BuildContext context) =>
+      const Divider(color: AppColors.cardBorder, height: 1, indent: 40);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Continent outlines (lat, lng as Offset.dx, Offset.dy)
 // ─────────────────────────────────────────────────────────────────────────────
 const List<List<Offset>> _continents = [
@@ -1251,6 +1987,495 @@ const Set<String> _mediumCountries = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Advance Year — Confirm Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+class _AdvanceConfirmSheet extends StatelessWidget {
+  final GameStateModel game;
+  final VoidCallback onConfirm;
+
+  const _AdvanceConfirmSheet({required this.game, required this.onConfirm});
+
+  @override
+  Widget build(BuildContext context) {
+    final taxIncome = game.gdpBillion * game.taxRate / 100;
+    final baseSpending = game.gdpBillion * 0.20;
+    final policySpending = game.activePolicies.fold(0.0, (s, p) => s + p.cost);
+    double maint = 0;
+    for (final b in BuildingsData.all) {
+      final lvl = game.buildingLevels[b.id] ?? 0;
+      if (lvl > 0) maint += lvl * b.moneyCostPerLevel * 0.02;
+    }
+    final net = taxIncome - baseSpending - game.militaryBudget - policySpending - maint;
+    final netColor = net >= 0 ? AppColors.economy : AppColors.danger;
+    final prevApproval = game.approvalHistory.length >= 2
+        ? game.approvalHistory[game.approvalHistory.length - 2]
+        : game.approvalRating;
+    final approvalTrend = game.approvalRating - prevApproval;
+
+    String _fmt(double v) => v.abs() >= 1000
+        ? '\$${(v.abs() / 1000).toStringAsFixed(1)}T'
+        : '\$${v.abs().toStringAsFixed(0)}B';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Row(children: [
+            const Text('⏭️', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Advance to Year ${game.currentYear + 1}',
+                  style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+              Text('Term year ${game.yearsInOffice + 1} of ${game.termDurationYears}',
+                  style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+            ]),
+          ]),
+          const SizedBox(height: 16),
+          const Divider(color: AppColors.cardBorder, height: 1),
+          const SizedBox(height: 14),
+
+          // Budget preview
+          const Text('BUDGET PROJECTION', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          _ConfirmRow('Tax Revenue', '+${_fmt(taxIncome)}', AppColors.economy),
+          _ConfirmRow('Gov. Spending', '-${_fmt(baseSpending)}', AppColors.danger),
+          _ConfirmRow('Military', '-${_fmt(game.militaryBudget)}', AppColors.military),
+          if (policySpending > 0) _ConfirmRow('Policies', '-${_fmt(policySpending)}', AppColors.social),
+          if (maint > 0) _ConfirmRow('Maintenance', '-${_fmt(maint)}', AppColors.resources),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: netColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: netColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Net this year', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('${net >= 0 ? '+' : '-'}${_fmt(net)}', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800)),
+            ]),
+          ),
+          const SizedBox(height: 14),
+
+          // Approval
+          Row(children: [
+            const Icon(Icons.thumb_up_rounded, size: 13, color: AppColors.textMuted),
+            const SizedBox(width: 6),
+            Text('Current approval: ${game.approvalRating.toStringAsFixed(0)}%',
+                style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12)),
+            const SizedBox(width: 6),
+            Text(
+              '${approvalTrend >= 0 ? '▲' : '▼'} ${approvalTrend.abs().toStringAsFixed(1)}%',
+              style: TextStyle(
+                color: approvalTrend >= 0 ? AppColors.economy : AppColors.danger,
+                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600,
+              ),
+            ),
+          ]),
+          if (game.approvalRating <= 25) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 13),
+                const SizedBox(width: 6),
+                Text('Approval critical — impeached if it drops below 15%',
+                    style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+              ]),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  side: const BorderSide(color: AppColors.cardBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton.icon(
+                onPressed: onConfirm,
+                icon: const Icon(Icons.skip_next_rounded, size: 16, color: Colors.white),
+                label: Text('Advance to ${game.currentYear + 1}',
+                    style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfirmRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _ConfirmRow(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 5),
+    child: Row(children: [
+      Container(width: 3, height: 11, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+      const SizedBox(width: 8),
+      Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12))),
+      Text(value, style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+    ]),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Year Summary Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+class _YearSummarySheet extends StatelessWidget {
+  final GameStateModel oldGame;
+  final GameStateModel newGame;
+  final VoidCallback onDone;
+
+  const _YearSummarySheet({required this.oldGame, required this.newGame, required this.onDone});
+
+  @override
+  Widget build(BuildContext context) {
+    final changes = _buildChanges();
+    final approvalColor = AppColors.approvalColor(newGame.approvalRating);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+
+          Row(children: [
+            const Text('📅', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Year ${newGame.currentYear} Summary',
+                  style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
+              Text('Political Capital earned: +${newGame.politicalCapital - oldGame.politicalCapital > 0 ? newGame.politicalCapital - oldGame.politicalCapital : 0} 💎',
+                  style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+            ])),
+            // Approval badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: approvalColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: approvalColor.withValues(alpha: 0.4)),
+              ),
+              child: Column(children: [
+                Text('${newGame.approvalRating.toStringAsFixed(0)}%',
+                    style: TextStyle(color: approvalColor, fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w800, height: 1)),
+                Text('Approval', style: TextStyle(color: approvalColor.withValues(alpha: 0.7), fontFamily: 'Poppins', fontSize: 9)),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.cardBorder, height: 1),
+          const SizedBox(height: 10),
+
+          if (changes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: Text('No significant changes this year.', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 13))),
+            )
+          else ...[
+            const Text('STAT CHANGES', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: changes.map((c) => _ChangeBadge(change: c)).toList()),
+          ],
+
+          // Low approval warning in summary
+          if (newGame.approvalRating <= 25) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 14),
+                const SizedBox(width: 8),
+                Expanded(child: Text(
+                  newGame.approvalRating <= 20
+                      ? 'CRITICAL: Impeachment imminent if approval drops below 15%!'
+                      : 'Warning: Approval at ${newGame.approvalRating.toStringAsFixed(0)}% — take action before next year.',
+                  style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                )),
+              ]),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onDone,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Continue', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_Change> _buildChanges() {
+    final list = <_Change>[];
+    void add(String label, String emoji, double before, double after, String unit, {bool lowerIsBetter = false, bool isCurrency = false}) {
+      final delta = after - before;
+      if (delta.abs() < 0.2) return;
+      list.add(_Change(label, emoji, delta, after, unit, lowerIsBetter: lowerIsBetter, isCurrency: isCurrency));
+    }
+    add('Approval',     '👑', oldGame.approvalRating,     newGame.approvalRating,     '%');
+    add('Happiness',    '😊', oldGame.happiness,           newGame.happiness,           '%');
+    add('GDP Growth',   '📈', oldGame.gdpGrowthRate,       newGame.gdpGrowthRate,       '%');
+    add('Stability',    '⚖️', oldGame.stability,           newGame.stability,           '%');
+    add('Inflation',    '💸', oldGame.inflation,            newGame.inflation,            '%', lowerIsBetter: true);
+    add('Unemployment', '👷', oldGame.unemploymentRate,    newGame.unemploymentRate,    '%', lowerIsBetter: true);
+    add('Diplo. Rep.',  '🌐', oldGame.diplomaticReputation,newGame.diplomaticReputation,'/100');
+    add('Food Security','🌾', oldGame.foodSecurity,        newGame.foodSecurity,        '%');
+    add('Military',     '🛡️', oldGame.militaryStrength,    newGame.militaryStrength,    '/100');
+    add('Treasury',     '🪙', oldGame.treasury,             newGame.treasury,             'B', isCurrency: true);
+    return list;
+  }
+}
+
+class _Change {
+  final String label;
+  final String emoji;
+  final double delta;
+  final double newValue;
+  final String unit;
+  final bool lowerIsBetter;
+  final bool isCurrency;
+  _Change(this.label, this.emoji, this.delta, this.newValue, this.unit, {this.lowerIsBetter = false, this.isCurrency = false});
+  bool get isPositive => lowerIsBetter ? delta < 0 : delta > 0;
+}
+
+class _ChangeBadge extends StatelessWidget {
+  final _Change change;
+  const _ChangeBadge({required this.change});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = change.isPositive ? AppColors.economy : AppColors.danger;
+    final arrow = change.delta > 0 ? '▲' : '▼';
+    final String deltaStr;
+    if (change.isCurrency) {
+      final abs = change.delta.abs();
+      deltaStr = abs >= 1000 ? '\$${(abs / 1000).toStringAsFixed(1)}T' : '\$${abs.toStringAsFixed(0)}B';
+    } else {
+      deltaStr = change.delta.abs().toStringAsFixed(1);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(change.emoji, style: const TextStyle(fontSize: 13)),
+        const SizedBox(width: 5),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(change.label, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9)),
+          Row(children: [
+            Text('$arrow ', style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700)),
+            Text(change.isCurrency ? deltaStr : '$deltaStr${change.unit}',
+                style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700)),
+          ]),
+        ]),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tutorial Overlay (first play)
+// ─────────────────────────────────────────────────────────────────────────────
+class _TutorialOverlay extends StatefulWidget {
+  final VoidCallback onDone;
+  const _TutorialOverlay({required this.onDone});
+
+  @override
+  State<_TutorialOverlay> createState() => _TutorialOverlayState();
+}
+
+class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerProviderStateMixin {
+  int _step = 0;
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+
+  static const _steps = [
+    (Icons.public_rounded,         '🌍 Welcome, World Leader!',     'You are now in charge of a nation. The world map shows all countries — tap any to view details or manage diplomatic relations.', false),
+    (Icons.skip_next_rounded,      '⏭️ Advance the Year',            'Tap the "Year XXXX" button to move time forward. Each year your economy, happiness, and approval update based on your choices.', true),
+    (Icons.thumb_up_rounded,       '👑 Approval Rating',             'Keep your approval above 15% or you\'ll be impeached! Balance tax rates, policies, and happiness to stay in power.', true),
+    (Icons.policy_rounded,         '📋 Policies & Buildings',        'Spend 💎 Political Capital on policies, and 🪙 Treasury on buildings. Always build a Power Plant first — other buildings need electricity!', false),
+    (Icons.account_balance_rounded,'🪙 Treasury & Diplomacy',        'Your treasury funds the nation. Tap the 🪙 badge to see the full budget. Tap any country to form alliances or impose sanctions.', false),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _next() {
+    if (_step < _steps.length - 1) {
+      _ctrl.reverse().then((_) {
+        setState(() => _step++);
+        _ctrl.forward();
+      });
+    } else {
+      widget.onDone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final step = _steps[_step];
+    final isLast = _step == _steps.length - 1;
+    final atBottom = step.$4; // position card at top when true (pointing to bottom HUD)
+
+    return Stack(
+      children: [
+        // Semi-transparent overlay
+        Container(color: Colors.black.withValues(alpha: 0.65)),
+
+        // Tutorial card
+        Positioned(
+          top: atBottom ? null : null,
+          bottom: atBottom ? 75 : null,
+          left: 16,
+          right: 16,
+          // Center vertically when not at bottom
+          child: atBottom
+              ? FadeTransition(opacity: _fade, child: _buildCard(step, isLast))
+              : Center(child: FadeTransition(opacity: _fade, child: _buildCard(step, isLast))),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard((IconData, String, String, bool) step, bool isLast) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 24)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                child: Icon(step.$1, color: AppColors.accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('TIP ${_step + 1}/${_steps.length}',
+                    style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, letterSpacing: 1.0)),
+                Text(step.$2,
+                    style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
+              ])),
+            ]),
+            const SizedBox(height: 12),
+            Text(step.$3,
+                style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13, height: 1.6)),
+            const SizedBox(height: 16),
+            Row(children: [
+              // Step dots
+              ...List.generate(_steps.length, (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: i == _step ? 18 : 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: i == _step ? AppColors.accent : AppColors.cardBorder,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              )),
+              const Spacer(),
+              if (!isLast)
+                TextButton(
+                  onPressed: widget.onDone,
+                  child: const Text('Skip', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12)),
+                ),
+              const SizedBox(width: 4),
+              ElevatedButton(
+                onPressed: _next,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: Text(isLast ? 'Got it!' : 'Next →',
+                    style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Fullscreen Map Painter
 // ─────────────────────────────────────────────────────────────────────────────
 class _FullMapPainter extends CustomPainter {
@@ -1280,16 +2505,73 @@ class _FullMapPainter extends CustomPainter {
     return 3.5;
   }
 
+  // Per-index colors matching _continents order:
+  // 0=Eurasia, 1=Africa, 2=N.America, 3=S.America, 4=Australia,
+  // 5=Greenland, 6=Japan, 7=UK, 8=New Zealand, 9=Madagascar,
+  // 10=Philippines, 11=Indonesia
+  static const _landFills = [
+    Color(0xFF2A5C35), // Eurasia — forest green
+    Color(0xFF8B5A1A), // Africa — warm ochre
+    Color(0xFF1E6B42), // North America — emerald
+    Color(0xFF1A7A30), // South America — jungle green
+    Color(0xFF9C4A1A), // Australia — red earth
+    Color(0xFFABC8DE), // Greenland — icy blue
+    Color(0xFF2A5C35), // Japan — forest green (Eurasia)
+    Color(0xFF3A5C8A), // UK — navy/indigo
+    Color(0xFF1A7A30), // New Zealand — jungle green
+    Color(0xFF8B5A1A), // Madagascar — ochre (Africa)
+    Color(0xFF2A5C35), // Philippines — forest green (Asia)
+    Color(0xFF2A5C35), // Indonesia — forest green (Asia)
+  ];
+
+  static const _landBorders = [
+    Color(0xFF3D8050), // Eurasia border
+    Color(0xFFAD7A30), // Africa border
+    Color(0xFF2E9060), // N.America border
+    Color(0xFF28A040), // S.America border
+    Color(0xFFBF6A2A), // Australia border
+    Color(0xFFCCDEEE), // Greenland border
+    Color(0xFF3D8050), // Japan border
+    Color(0xFF4A72A8), // UK border
+    Color(0xFF28A040), // New Zealand border
+    Color(0xFFAD7A30), // Madagascar border
+    Color(0xFF3D8050), // Philippines border
+    Color(0xFF3D8050), // Indonesia border
+  ];
+
+  Color _continentDotColor(String? continent) {
+    switch (continent) {
+      case 'North America': return const Color(0xFF64B5F6);
+      case 'South America': return const Color(0xFF81C784);
+      case 'Europe':        return const Color(0xFFCE93D8);
+      case 'Africa':        return const Color(0xFFFFB74D);
+      case 'Asia':          return const Color(0xFFFF8A65);
+      case 'Oceania':       return const Color(0xFF4DD0E1);
+      default:              return const Color(0xFF90A4AE);
+    }
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     // ── Ocean ─────────────────────────────────────────────────
     canvas.drawRect(Offset.zero & size,
-        Paint()..color = const Color(0xFF0A1628));
+        Paint()..color = const Color(0xFF0C2340));
+
+    // Subtle ocean depth gradient (darker at edges)
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 1.0,
+          colors: [const Color(0x00164070), const Color(0x40040D1A)],
+        ).createShader(Offset.zero & size),
+    );
 
     // ── Grid ──────────────────────────────────────────────────
     final gridPaint = Paint()
-      ..color = const Color(0xFF16253A)
-      ..strokeWidth = 0.8;
+      ..color = const Color(0xFF163560)
+      ..strokeWidth = 0.6;
     for (var lng = -180; lng <= 180; lng += 30) {
       final x = (lng + 180) / 360 * size.width;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
@@ -1299,32 +2581,46 @@ class _FullMapPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
+    // Tropic lines (subtle dashed-style via color)
+    for (final lat in [23.5, -23.5]) {
+      final y = _project(lat, 0, size).dy;
+      canvas.drawLine(
+        Offset(0, y), Offset(size.width, y),
+        Paint()..color = const Color(0xFF1E4A70)..strokeWidth = 0.8,
+      );
+    }
+
     // Equator
     final eqY = _project(0, 0, size).dy;
     canvas.drawLine(
       Offset(0, eqY), Offset(size.width, eqY),
-      Paint()..color = const Color(0xFF1E3A55)..strokeWidth = 1.2,
+      Paint()..color = const Color(0xFF2A6090)..strokeWidth = 1.2,
     );
 
-    // ── Continent fills ────────────────────────────────────────
-    final landFill = Paint()..color = const Color(0xFF162032);
-    final landBorder = Paint()
-      ..color = const Color(0xFF233554)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
-
-    for (final outline in _continents) {
+    // ── Continent fills (per-continent color) ─────────────────
+    for (var i = 0; i < _continents.length; i++) {
+      final outline = _continents[i];
       if (outline.isEmpty) continue;
+      final fill = i < _landFills.length ? _landFills[i] : const Color(0xFF2A5C35);
+      final border = i < _landBorders.length ? _landBorders[i] : const Color(0xFF3D8050);
+
       final path = Path();
       final first = _project(outline.first.dx, outline.first.dy, size);
       path.moveTo(first.dx, first.dy);
-      for (var i = 1; i < outline.length; i++) {
-        final pt = _project(outline[i].dx, outline[i].dy, size);
+      for (var j = 1; j < outline.length; j++) {
+        final pt = _project(outline[j].dx, outline[j].dy, size);
         path.lineTo(pt.dx, pt.dy);
       }
       path.close();
-      canvas.drawPath(path, landFill);
-      canvas.drawPath(path, landBorder);
+
+      canvas.drawPath(path, Paint()..color = fill);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = border
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.9,
+      );
     }
 
     // ── Continent labels ───────────────────────────────────────
@@ -1350,17 +2646,18 @@ class _FullMapPainter extends CustomPainter {
       final halo = _haloRadius(id);
       if (halo <= 0) continue;
       final pos = _project(entry.value.dx, entry.value.dy, size);
+      final country = CountriesData.byId(id);
       final Color haloColor;
       if (alliedIds.contains(id)) {
         haloColor = const Color(0xFF4CAF50);
       } else if (rivalIds.contains(id)) {
         haloColor = const Color(0xFFF44336);
       } else {
-        haloColor = const Color(0xFF2A4060);
+        haloColor = _continentDotColor(country?.continent);
       }
       canvas.drawCircle(
         pos, halo,
-        Paint()..color = haloColor.withValues(alpha: 0.12),
+        Paint()..color = haloColor.withValues(alpha: 0.15),
       );
     }
 
@@ -1369,8 +2666,8 @@ class _FullMapPainter extends CustomPainter {
     if (playerLatLng != null) {
       final pos = _project(playerLatLng.dx, playerLatLng.dy, size);
       canvas.drawCircle(
-        pos, 22,
-        Paint()..color = AppColors.accent.withValues(alpha: 0.1),
+        pos, 26,
+        Paint()..color = AppColors.accent.withValues(alpha: 0.12),
       );
     }
 
@@ -1380,27 +2677,32 @@ class _FullMapPainter extends CustomPainter {
       if (id == playerId) continue;
       final pos = _project(entry.value.dx, entry.value.dy, size);
       final radius = _dotRadius(id);
+      final country = CountriesData.byId(id);
+      final dotColor = _continentDotColor(country?.continent);
 
       if (id == tappedId) {
-        // Tapped highlight
         canvas.drawCircle(
           pos, radius + 8,
-          Paint()..color = Colors.white.withValues(alpha: 0.1),
+          Paint()..color = Colors.white.withValues(alpha: 0.12),
         );
         canvas.drawCircle(
           pos, radius + 5,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5
-            ..color = Colors.white.withValues(alpha: 0.6),
+            ..color = Colors.white.withValues(alpha: 0.7),
         );
         canvas.drawCircle(pos, radius + 1, Paint()..color = Colors.white);
       } else if (alliedIds.contains(id)) {
+        canvas.drawCircle(pos, radius + 1, Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
         canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFF4CAF50));
       } else if (rivalIds.contains(id)) {
+        canvas.drawCircle(pos, radius + 1, Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
         canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFFF44336));
       } else {
-        canvas.drawCircle(pos, radius - 1, Paint()..color = const Color(0xFF2A4060));
+        // Dim outer glow + colored dot
+        canvas.drawCircle(pos, radius + 1, Paint()..color = dotColor.withValues(alpha: 0.2));
+        canvas.drawCircle(pos, radius - 0.5, Paint()..color = dotColor.withValues(alpha: 0.85));
       }
     }
 
@@ -1466,24 +2768,25 @@ class _FullMapPainter extends CustomPainter {
   }
 
   void _drawContinentLabels(Canvas canvas, Size size) {
+    // (lat, lng, label, color)
     final entries = [
-      (55.0, 20.0, 'EUROPE'),
-      (50.0, 90.0, 'ASIA'),
-      (5.0,  20.0, 'AFRICA'),
-      (40.0, -100.0, 'N. AMERICA'),
-      (-20.0, -55.0, 'S. AMERICA'),
-      (-25.0, 135.0, 'AUSTRALIA'),
+      (55.0,  20.0,    'EUROPE',      const Color(0xFF9575CD)),
+      (48.0,  90.0,    'ASIA',        const Color(0xFFFF8A65)),
+      (5.0,   20.0,    'AFRICA',      const Color(0xFFFFB74D)),
+      (48.0,  -100.0,  'N. AMERICA',  const Color(0xFF64B5F6)),
+      (-20.0, -55.0,   'S. AMERICA',  const Color(0xFF81C784)),
+      (-25.0, 135.0,   'AUSTRALIA',   const Color(0xFFFF7043)),
     ];
     for (final e in entries) {
       final pos = _project(e.$1, e.$2, size);
       final tp = TextPainter(
         text: TextSpan(
           text: e.$3,
-          style: const TextStyle(
-            color: Color(0xFF1E3A55),
+          style: TextStyle(
+            color: e.$4.withValues(alpha: 0.55),
             fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2.5,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -1520,7 +2823,7 @@ class _FullMapPainter extends CustomPainter {
         Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4),
         const Radius.circular(4),
       ),
-      Paint()..color = const Color(0xCC071020),
+      Paint()..color = const Color(0xD0060F1E),
     );
     tp.paint(canvas, Offset(lx, ly));
   }

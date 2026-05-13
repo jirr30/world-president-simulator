@@ -8,7 +8,9 @@ import '../../widgets/common/country_flag.dart';
 import '../../../services/simulation_engine.dart';
 
 class GameOverScreen extends ConsumerStatefulWidget {
-  const GameOverScreen({super.key});
+  final String? reason;
+
+  const GameOverScreen({super.key, this.reason});
 
   @override
   ConsumerState<GameOverScreen> createState() => _GameOverScreenState();
@@ -45,13 +47,15 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
       );
     }
 
+    final reason = widget.reason;
+    final isImpeached = reason == 'impeached';
     final legacy = SimulationEngine.getLegacyRating(game);
     final avgApproval = game.approvalHistory.isNotEmpty
         ? game.approvalHistory.reduce((a, b) => a + b) /
             game.approvalHistory.length
         : game.approvalRating;
-    final approvalColor = AppColors.approvalColor(avgApproval);
-    final emoji = _legacyEmoji(avgApproval);
+    final approvalColor = isImpeached ? AppColors.danger : AppColors.approvalColor(avgApproval);
+    final emoji = isImpeached ? '🔥' : _legacyEmoji(avgApproval);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -80,10 +84,10 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       const Spacer(),
                       Text(emoji, style: const TextStyle(fontSize: 56)),
                       const SizedBox(height: 12),
-                      const Text(
-                        'TERM ENDED',
+                      Text(
+                        isImpeached ? 'IMPEACHED' : 'TERM ENDED',
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: isImpeached ? AppColors.danger : AppColors.textMuted,
                           fontSize: 10,
                           letterSpacing: 2.5,
                           fontFamily: 'Poppins',
@@ -92,7 +96,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        legacy,
+                        isImpeached ? 'Removed from Power' : legacy,
                         style: TextStyle(
                           color: approvalColor,
                           fontSize: 18,
@@ -282,7 +286,9 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _verdictText(avgApproval, game.country.name),
+                            isImpeached
+                                ? _impeachmentText(game.approvalRating, game.country.name)
+                                : _verdictText(avgApproval, game.country.name),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -310,6 +316,16 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
     if (approval >= 35) return '😐';
     if (approval >= 20) return '😤';
     return '💀';
+  }
+
+  String _impeachmentText(double approval, String countryName) {
+    if (approval <= 5) {
+      return 'With approval at a catastrophic low, the people of $countryName took to the streets. Parliament voted unanimously to remove you. You will be remembered as the worst leader in the nation\'s history.';
+    } else if (approval <= 10) {
+      return 'Mass protests and a parliamentary vote forced you out of office. Your policies failed the people of $countryName and history will not be kind to your legacy.';
+    } else {
+      return 'Public trust collapsed beyond recovery. Facing impeachment proceedings in parliament, you were removed from office. $countryName moves forward without you.';
+    }
   }
 
   String _verdictText(double approval, String countryName) {

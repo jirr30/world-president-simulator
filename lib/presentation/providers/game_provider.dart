@@ -27,6 +27,42 @@ class GameNotifier extends StateNotifier<GameStateModel?> {
     return true;
   }
 
+  void proposeAlliance(String countryName) {
+    if (state == null) return;
+    state = SimulationEngine.proposeAlliance(state!, countryName);
+    GameSaveService.save(state!);
+  }
+
+  void breakAlliance(String countryName) {
+    if (state == null) return;
+    state = SimulationEngine.breakAlliance(state!, countryName);
+    GameSaveService.save(state!);
+  }
+
+  void imposeSanction(String countryName) {
+    if (state == null) return;
+    state = SimulationEngine.imposeSanction(state!, countryName);
+    GameSaveService.save(state!);
+  }
+
+  void liftSanction(String countryName) {
+    if (state == null) return;
+    state = SimulationEngine.liftSanction(state!, countryName);
+    GameSaveService.save(state!);
+  }
+
+  void setTaxRate(double rate) {
+    if (state == null) return;
+    state = state!.copyWith(taxRate: rate.clamp(5.0, 60.0));
+    GameSaveService.save(state!);
+  }
+
+  void buildOrUpgrade(String buildingId) {
+    if (state == null) return;
+    state = SimulationEngine.buildOrUpgrade(state!, buildingId);
+    GameSaveService.save(state!);
+  }
+
   void applyPolicy(PolicyModel policy) {
     if (state == null) return;
     state = SimulationEngine.applyPolicy(state!, policy);
