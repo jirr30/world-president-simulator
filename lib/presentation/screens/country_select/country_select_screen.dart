@@ -32,6 +32,7 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Left sidebar: search + filter ───────────────────
           SizedBox(
@@ -102,9 +103,9 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                             ref.read(searchQueryProvider.notifier).state = v,
                       ),
                     ),
-                    // Continent filter
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+                    // Continent filter label
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
                       child: Text(
                         'CONTINENT',
                         style: TextStyle(
@@ -116,35 +117,40 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: _ContinentButton(
-                        label: 'All Regions',
-                        icon: Icons.public_rounded,
-                        selected: selectedContinent == null,
-                        color: AppColors.textSecondary,
-                        onTap: () {
-                          ref.read(selectedContinentProvider.notifier).state = null;
-                          ref.read(searchQueryProvider.notifier).state = '';
-                          _searchCtrl.clear();
-                        },
+                    // Scrollable continent buttons — won't overflow on short screens
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ContinentButton(
+                              label: 'All Regions',
+                              icon: Icons.public_rounded,
+                              selected: selectedContinent == null,
+                              color: AppColors.textSecondary,
+                              onTap: () {
+                                ref.read(selectedContinentProvider.notifier).state = null;
+                                ref.read(searchQueryProvider.notifier).state = '';
+                                _searchCtrl.clear();
+                              },
+                            ),
+                            ...continents.map((c) => _ContinentButton(
+                              label: c,
+                              icon: _continentIcon(c),
+                              selected: selectedContinent == c,
+                              color: _continentColor(c),
+                              onTap: () {
+                                ref.read(selectedContinentProvider.notifier).state = c;
+                                ref.read(searchQueryProvider.notifier).state = '';
+                                _searchCtrl.clear();
+                              },
+                            )),
+                          ],
+                        ),
                       ),
                     ),
-                    ...continents.map((c) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: _ContinentButton(
-                            label: c,
-                            icon: _continentIcon(c),
-                            selected: selectedContinent == c,
-                            color: _continentColor(c),
-                            onTap: () {
-                              ref.read(selectedContinentProvider.notifier).state = c;
-                              ref.read(searchQueryProvider.notifier).state = '';
-                              _searchCtrl.clear();
-                            },
-                          ),
-                        )),
-                    const Spacer(),
+                    // Footer count
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(
