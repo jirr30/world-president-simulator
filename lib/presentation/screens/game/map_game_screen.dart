@@ -2608,35 +2608,40 @@ class _FullMapPainter extends CustomPainter {
     }
 
     // ── Country name labels ────────────────────────────────────
-    // Always show: player + allies + rivals + tapped
-    // At zoom > 2.5: show all countries
+    // Neutral labels: large=always, medium=zoom≥1.8, small=zoom≥3.0
+    // Ally / rival / tapped: always, with colored box.
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
-      final isAlly = alliedIds.contains(id);
-      final isRival = rivalIds.contains(id);
-      final isTapped = id == tappedId;
-      final showAtThisZoom = zoom >= 2.5;
 
-      if (!isAlly && !isRival && !isTapped && !showAtThisZoom) continue;
+      final isAlly   = alliedIds.contains(id);
+      final isRival  = rivalIds.contains(id);
+      final isTapped = id == tappedId;
+
+      final isLarge  = _largeCountries.contains(id);
+      final isMedium = _mediumCountries.contains(id);
+
+      if (!isAlly && !isRival && !isTapped) {
+        // Neutral — show based on country size and current zoom
+        final minZoom = isLarge ? 1.0 : isMedium ? 1.8 : 3.0;
+        if (zoom < minZoom) continue;
+      }
 
       final pos = _project(entry.value.dx, entry.value.dy, size);
       final country = CountriesData.byId(id);
       if (country == null) continue;
 
       final label = '${country.flag} ${country.name}';
-      final Color labelColor;
-      if (isTapped) {
-        labelColor = Colors.white;
-      } else if (isAlly) {
-        labelColor = const Color(0xFF66BB6A);
-      } else if (isRival) {
-        labelColor = const Color(0xFFEF5350);
-      } else {
-        labelColor = AppColors.textSecondary;
-      }
 
-      _drawCountryLabel(canvas, pos, label, labelColor, size);
+      if (isTapped) {
+        _drawCountryLabel(canvas, pos, label, Colors.white, size);
+      } else if (isAlly) {
+        _drawCountryLabel(canvas, pos, label, const Color(0xFF66BB6A), size);
+      } else if (isRival) {
+        _drawCountryLabel(canvas, pos, label, const Color(0xFFEF5350), size);
+      } else {
+        _drawNeutralLabel(canvas, pos, label, size, large: isLarge);
+      }
     }
 
     // ── Player country (top layer) ─────────────────────────────
@@ -2666,6 +2671,31 @@ class _FullMapPainter extends CustomPainter {
         glowing: true,
       );
     }
+  }
+
+  // Simple centered label for neutral countries — no background box, text shadow only.
+  void _drawNeutralLabel(Canvas canvas, Offset pos, String text, Size mapSize, {bool large = false}) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: const Color(0xDDFFFFFF),
+          fontSize: large ? 9.5 : 8.5,
+          fontWeight: FontWeight.w600,
+          shadows: const [
+            Shadow(blurRadius: 3, color: Color(0xCC000000), offset: Offset(0, 1)),
+            Shadow(blurRadius: 6, color: Color(0x88000000)),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: 150);
+
+    double lx = pos.dx - tp.width / 2;
+    double ly = pos.dy + 5;
+    lx = lx.clamp(2.0, mapSize.width  - tp.width  - 2);
+    ly = ly.clamp(2.0, mapSize.height - tp.height - 2);
+    tp.paint(canvas, Offset(lx, ly));
   }
 
   void _drawCountryLabel(
