@@ -79,6 +79,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onPressed: () => _confirmLeave(context),
             ),
             actions: [
+              const Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: Tooltip(
+                  message: 'Progress auto-saved',
+                  child: Icon(Icons.save_rounded, size: 16, color: AppColors.textMuted),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: TextButton.icon(
@@ -146,7 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
         ),
         content: const Text(
-          'Your current progress will be lost.',
+          'Game is auto-saved. You can continue from the main menu.',
           style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins'),
         ),
         actions: [
@@ -156,7 +163,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              ref.read(gameProvider.notifier).reset();
+              ref.read(gameProvider.notifier).leaveGame();
               context.go('/home');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
