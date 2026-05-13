@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/buildings_data.dart';
@@ -222,13 +223,25 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (d) => _pendingTapMap = d.localPosition,
                     onTap: _handleTap,
-                    child: CustomPaint(
-                      painter: _FullMapPainter(
-                        game: game,
-                        tappedId: _tappedCountryId,
-                        zoom: _currentZoom,
-                      ),
-                      size: _mapSize,
+                    child: Stack(
+                      children: [
+                        // ── Accurate world map (SVG with real country borders) ──
+                        Positioned.fill(
+                          child: SvgPicture.asset(
+                            'assets/images/world_map.svg',
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                        // ── Interactive overlay (markers, labels) ──
+                        CustomPaint(
+                          painter: _FullMapPainter(
+                            game: game,
+                            tappedId: _tappedCountryId,
+                            zoom: _currentZoom,
+                          ),
+                          size: _mapSize,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1881,10 +1894,8 @@ class _SheetDivider extends StatelessWidget {
       const Divider(color: AppColors.cardBorder, height: 1, indent: 40);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Continent outlines (lat, lng as Offset.dx, Offset.dy)
-// ─────────────────────────────────────────────────────────────────────────────
-const List<List<Offset>> _continents = [
+// (continent polygon data removed — world map is now rendered from SVG asset)
+const List<List<Offset>> _continents_unused = [
   // Eurasia
   [
     Offset(71, -10), Offset(71, 180), Offset(65, 180),
@@ -2518,126 +2529,11 @@ class _FullMapPainter extends CustomPainter {
     return 3.5;
   }
 
-  // Per-index colors matching _continents order:
-  // 0=Eurasia, 1=Africa, 2=N.America, 3=S.America, 4=Australia,
-  // 5=Greenland, 6=Japan, 7=UK, 8=New Zealand, 9=Madagascar,
-  // 10=Philippines, 11=Indonesia
-  static const _landFills = [
-    Color(0xFF2A5C35), // Eurasia — forest green
-    Color(0xFF8B5A1A), // Africa — warm ochre
-    Color(0xFF1E6B42), // North America — emerald
-    Color(0xFF1A7A30), // South America — jungle green
-    Color(0xFF9C4A1A), // Australia — red earth
-    Color(0xFFABC8DE), // Greenland — icy blue
-    Color(0xFF2A5C35), // Japan — forest green (Eurasia)
-    Color(0xFF3A5C8A), // UK — navy/indigo
-    Color(0xFF1A7A30), // New Zealand — jungle green
-    Color(0xFF8B5A1A), // Madagascar — ochre (Africa)
-    Color(0xFF2A5C35), // Philippines — forest green (Asia)
-    Color(0xFF2A5C35), // Indonesia — forest green (Asia)
-  ];
-
-  static const _landBorders = [
-    Color(0xFF3D8050), // Eurasia border
-    Color(0xFFAD7A30), // Africa border
-    Color(0xFF2E9060), // N.America border
-    Color(0xFF28A040), // S.America border
-    Color(0xFFBF6A2A), // Australia border
-    Color(0xFFCCDEEE), // Greenland border
-    Color(0xFF3D8050), // Japan border
-    Color(0xFF4A72A8), // UK border
-    Color(0xFF28A040), // New Zealand border
-    Color(0xFFAD7A30), // Madagascar border
-    Color(0xFF3D8050), // Philippines border
-    Color(0xFF3D8050), // Indonesia border
-  ];
-
-  Color _continentDotColor(String? continent) {
-    switch (continent) {
-      case 'North America': return const Color(0xFF64B5F6);
-      case 'South America': return const Color(0xFF81C784);
-      case 'Europe':        return const Color(0xFFCE93D8);
-      case 'Africa':        return const Color(0xFFFFB74D);
-      case 'Asia':          return const Color(0xFFFF8A65);
-      case 'Oceania':       return const Color(0xFF4DD0E1);
-      default:              return const Color(0xFF90A4AE);
-    }
-  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ── Ocean ─────────────────────────────────────────────────
-    canvas.drawRect(Offset.zero & size,
-        Paint()..color = const Color(0xFF0C2340));
-
-    // Subtle ocean depth gradient (darker at edges)
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 1.0,
-          colors: [const Color(0x00164070), const Color(0x40040D1A)],
-        ).createShader(Offset.zero & size),
-    );
-
-    // ── Grid ──────────────────────────────────────────────────
-    final gridPaint = Paint()
-      ..color = const Color(0xFF163560)
-      ..strokeWidth = 0.6;
-    for (var lng = -180; lng <= 180; lng += 30) {
-      final x = (lng + 180) / 360 * size.width;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    for (var lat = -60; lat <= 60; lat += 30) {
-      final y = _project(lat.toDouble(), 0, size).dy;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    // Tropic lines (subtle dashed-style via color)
-    for (final lat in [23.5, -23.5]) {
-      final y = _project(lat, 0, size).dy;
-      canvas.drawLine(
-        Offset(0, y), Offset(size.width, y),
-        Paint()..color = const Color(0xFF1E4A70)..strokeWidth = 0.8,
-      );
-    }
-
-    // Equator
-    final eqY = _project(0, 0, size).dy;
-    canvas.drawLine(
-      Offset(0, eqY), Offset(size.width, eqY),
-      Paint()..color = const Color(0xFF2A6090)..strokeWidth = 1.2,
-    );
-
-    // ── Continent fills (per-continent color) ─────────────────
-    for (var i = 0; i < _continents.length; i++) {
-      final outline = _continents[i];
-      if (outline.isEmpty) continue;
-      final fill = i < _landFills.length ? _landFills[i] : const Color(0xFF2A5C35);
-      final border = i < _landBorders.length ? _landBorders[i] : const Color(0xFF3D8050);
-
-      final path = Path();
-      final first = _project(outline.first.dx, outline.first.dy, size);
-      path.moveTo(first.dx, first.dy);
-      for (var j = 1; j < outline.length; j++) {
-        final pt = _project(outline[j].dx, outline[j].dy, size);
-        path.lineTo(pt.dx, pt.dy);
-      }
-      path.close();
-
-      canvas.drawPath(path, Paint()..color = fill);
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = border
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.9,
-      );
-    }
-
-    // ── Continent labels ───────────────────────────────────────
-    _drawContinentLabels(canvas, size);
+    // SVG background handles ocean, land, grid lines, and continent colors.
+    // This painter draws only interactive markers on top.
 
     // ── Build relationship sets ────────────────────────────────
     final alliedIds = <String>{};
@@ -2652,26 +2548,19 @@ class _FullMapPainter extends CustomPainter {
     }
     final playerId = game.country.id;
 
-    // ── Territory halos (drawn before dots) ───────────────────
+    // ── Territory halos for ally/rival countries ──────────────
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
+      final isAlly  = alliedIds.contains(id);
+      final isRival = rivalIds.contains(id);
+      if (!isAlly && !isRival) continue;
       final halo = _haloRadius(id);
       if (halo <= 0) continue;
       final pos = _project(entry.value.dx, entry.value.dy, size);
-      final country = CountriesData.byId(id);
-      final Color haloColor;
-      if (alliedIds.contains(id)) {
-        haloColor = const Color(0xFF4CAF50);
-      } else if (rivalIds.contains(id)) {
-        haloColor = const Color(0xFFF44336);
-      } else {
-        haloColor = _continentDotColor(country?.continent);
-      }
-      canvas.drawCircle(
-        pos, halo,
-        Paint()..color = haloColor.withValues(alpha: 0.15),
-      );
+      final haloColor = isAlly ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
+      canvas.drawCircle(pos, halo,
+          Paint()..color = haloColor.withValues(alpha: 0.18));
     }
 
     // Player halo
@@ -2684,38 +2573,37 @@ class _FullMapPainter extends CustomPainter {
       );
     }
 
-    // ── Country dots ──────────────────────────────────────────
+    // ── Country markers (only meaningful states) ──────────────
+    // Neutral countries have no dot — tap anywhere on the map to select.
+    // Only ally (green), rival (red), and tapped (white ring) get markers.
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
-      final pos = _project(entry.value.dx, entry.value.dy, size);
-      final radius = _dotRadius(id);
-      final country = CountriesData.byId(id);
-      final dotColor = _continentDotColor(country?.continent);
+      final isAlly   = alliedIds.contains(id);
+      final isRival  = rivalIds.contains(id);
+      final isTapped = id == tappedId;
+      if (!isAlly && !isRival && !isTapped) continue;
 
-      if (id == tappedId) {
-        canvas.drawCircle(
-          pos, radius + 8,
-          Paint()..color = Colors.white.withValues(alpha: 0.12),
-        );
-        canvas.drawCircle(
-          pos, radius + 5,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..color = Colors.white.withValues(alpha: 0.7),
-        );
+      final pos    = _project(entry.value.dx, entry.value.dy, size);
+      final radius = _dotRadius(id);
+
+      if (isTapped) {
+        canvas.drawCircle(pos, radius + 8,
+            Paint()..color = Colors.white.withValues(alpha: 0.12));
+        canvas.drawCircle(pos, radius + 5,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.5
+              ..color = Colors.white.withValues(alpha: 0.7));
         canvas.drawCircle(pos, radius + 1, Paint()..color = Colors.white);
-      } else if (alliedIds.contains(id)) {
-        canvas.drawCircle(pos, radius + 1, Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
+      } else if (isAlly) {
+        canvas.drawCircle(pos, radius + 1,
+            Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
         canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFF4CAF50));
-      } else if (rivalIds.contains(id)) {
-        canvas.drawCircle(pos, radius + 1, Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
+      } else if (isRival) {
+        canvas.drawCircle(pos, radius + 1,
+            Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
         canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFFF44336));
-      } else {
-        // Dim outer glow + colored dot
-        canvas.drawCircle(pos, radius + 1, Paint()..color = dotColor.withValues(alpha: 0.2));
-        canvas.drawCircle(pos, radius - 0.5, Paint()..color = dotColor.withValues(alpha: 0.85));
       }
     }
 
@@ -2777,34 +2665,6 @@ class _FullMapPainter extends CustomPainter {
         AppColors.accent, size,
         glowing: true,
       );
-    }
-  }
-
-  void _drawContinentLabels(Canvas canvas, Size size) {
-    // (lat, lng, label, color)
-    final entries = [
-      (55.0,  20.0,    'EUROPE',      const Color(0xFF9575CD)),
-      (48.0,  90.0,    'ASIA',        const Color(0xFFFF8A65)),
-      (5.0,   20.0,    'AFRICA',      const Color(0xFFFFB74D)),
-      (48.0,  -100.0,  'N. AMERICA',  const Color(0xFF64B5F6)),
-      (-20.0, -55.0,   'S. AMERICA',  const Color(0xFF81C784)),
-      (-25.0, 135.0,   'AUSTRALIA',   const Color(0xFFFF7043)),
-    ];
-    for (final e in entries) {
-      final pos = _project(e.$1, e.$2, size);
-      final tp = TextPainter(
-        text: TextSpan(
-          text: e.$3,
-          style: TextStyle(
-            color: e.$4.withValues(alpha: 0.55),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 2.5,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
     }
   }
 
