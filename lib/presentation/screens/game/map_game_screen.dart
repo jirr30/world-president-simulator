@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     super.initState();
     _transformController = TransformationController();
     _transformController.addListener(_onTransformChanged);
+    // Re-apply fullscreen when returning from sub-screens (events, policies, etc.)
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   void _onTransformChanged() {
@@ -204,6 +207,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0C2340),
+      extendBody: true,
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
           // ── 1. Fullscreen interactive map ──────────────────────
