@@ -5,6 +5,7 @@ import '../../presentation/screens/splash/splash_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/country_select/country_select_screen.dart';
 import '../../presentation/screens/dashboard/dashboard_screen.dart';
+import '../../presentation/screens/game/map_game_screen.dart';
 import '../../presentation/screens/policy/policy_screen.dart';
 import '../../presentation/screens/event/event_screen.dart';
 import '../../presentation/screens/game_over/game_over_screen.dart';
@@ -16,7 +17,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/select', builder: (_, __) => const CountrySelectScreen()),
-      GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: '/dashboard', builder: (_, __) => const MapGameScreen()),
+      GoRoute(path: '/dashboard/classic', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/policies', builder: (_, __) => const PolicyScreen()),
       GoRoute(path: '/event', builder: (_, __) => const EventScreen()),
       GoRoute(path: '/gameover', builder: (_, __) => const GameOverScreen()),
