@@ -200,7 +200,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
 
     CountryModel? tappedCountry;
     if (_tappedCountryId != null) {
-      tappedCountry = CountriesData.byId(_tappedCountryId!);
+      tappedCountry = CountriesData.byCoordId(_tappedCountryId!);
     }
     final showCountryPanel = tappedCountry != null && !_showStatsPanel;
     final isPlayerTapped = _tappedCountryId == game.country.id;
@@ -425,6 +425,47 @@ class _MapBtn extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Icon-only HUD button (Build, Stats, Policies)
+// ─────────────────────────────────────────────────────────────────────────────
+class _HudIconBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool active;
+
+  const _HudIconBtn({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: active
+              ? color.withValues(alpha: 0.18)
+              : const Color(0x44071020),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: active
+                ? color.withValues(alpha: 0.55)
+                : AppColors.cardBorder,
+            width: 1.2,
+          ),
+        ),
+        child: Icon(icon, color: color, size: 18),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Top HUD
 // ─────────────────────────────────────────────────────────────────────────────
 class _TopHud extends StatelessWidget {
@@ -503,67 +544,17 @@ class _TopHud extends StatelessWidget {
             child: _TreasuryBadge(treasury: game.treasury, tappable: true),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
+          _HudIconBtn(
+            icon: Icons.location_city_rounded,
+            color: AppColors.resources,
             onTap: onBuildings,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0x44071020),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.location_city_rounded, color: AppColors.resources, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Build',
-                    style: TextStyle(color: AppColors.resources, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
+          _HudIconBtn(
+            icon: Icons.bar_chart_rounded,
+            color: showingStats ? AppColors.accent : AppColors.textSecondary,
             onTap: onToggleStats,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: showingStats
-                    ? AppColors.accent.withValues(alpha: 0.15)
-                    : const Color(0x44071020),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: showingStats
-                      ? AppColors.accent.withValues(alpha: 0.5)
-                      : AppColors.cardBorder,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.bar_chart_rounded,
-                      color: showingStats
-                          ? AppColors.accent
-                          : AppColors.textSecondary,
-                      size: 15),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Stats',
-                    style: TextStyle(
-                      color: showingStats
-                          ? AppColors.accent
-                          : AppColors.textSecondary,
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            active: showingStats,
           ),
         ],
       ),
@@ -729,48 +720,38 @@ class _BottomHudState extends State<_BottomHud>
             ),
           ),
           const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: widget.onPolicies,
-            icon: const Icon(Icons.policy_rounded,
-                size: 14, color: AppColors.accent),
-            label: const Text(
-              'Policies',
-              style: TextStyle(
-                  color: AppColors.accent,
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.accent.withValues(alpha: 0.4)),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              minimumSize: Size.zero,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
+          _HudIconBtn(
+            icon: Icons.policy_rounded,
+            color: AppColors.accent,
+            onTap: widget.onPolicies,
           ),
           const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: widget.onAdvanceYear,
-            icon: const Icon(Icons.skip_next_rounded,
-                size: 15, color: AppColors.background),
-            label: Text(
-              'Year ${game.currentYear + 1}',
-              style: const TextStyle(
-                color: AppColors.background,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+          GestureDetector(
+            onTap: widget.onAdvanceYear,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(10),
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              minimumSize: Size.zero,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.skip_next_rounded,
+                      size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${game.currentYear + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -2460,7 +2441,9 @@ class _FullMapPainter extends CustomPainter {
       final id = CountryCoordinates.resolveId(name);
       if (id != null) rivalIds.add(id);
     }
-    final playerId = game.country.id;
+    // CountryCoordinates uses slugs ('china'), game.country.id uses ISO ('CN').
+    final playerId = CountryCoordinates.resolveId(game.country.name) ??
+        CountryCoordinates.nameToId(game.country.name);
 
     // ── Territory halos for ally/rival countries ──────────────
     for (final entry in CountryCoordinates.all.entries) {
@@ -2542,7 +2525,7 @@ class _FullMapPainter extends CustomPainter {
       }
 
       final pos = _project(entry.value.dx, entry.value.dy, size);
-      final country = CountriesData.byId(id);
+      final country = CountriesData.byCoordId(id);
       if (country == null) continue;
 
       final label = '${country.flag} ${country.name}';

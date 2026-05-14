@@ -908,6 +908,22 @@ class CountriesData {
     }
   }
 
+  // Look up a country using a CountryCoordinates slug (e.g. 'usa', 'south_korea').
+  static CountryModel? byCoordId(String coordId) {
+    const overrides = <String, String>{
+      'usa': 'United States',
+      'uk': 'United Kingdom',
+      'uae': 'UAE',
+      'czech': 'Czech Republic',
+    };
+    final name = overrides[coordId] ??
+        coordId
+            .split('_')
+            .map((w) => '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
+    return byName(name);
+  }
+
   static CountryModel? byName(String name) {
     try {
       return all.firstWhere((c) => c.name == name);
