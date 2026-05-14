@@ -26,6 +26,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   bool _showStatsPanel = false;
   bool _showTutorial = false;
   bool _tutorialChecked = false;
+  bool _showLabels = true;
   GameStateModel? _currentGame;
 
   late final MapController _mapController;
@@ -227,7 +228,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                 ),
               ),
               // Game overlay: country markers, halos, labels
-              _CountryOverlayWidget(game: game, tappedId: _tappedCountryId),
+              _CountryOverlayWidget(game: game, tappedId: _tappedCountryId, showLabels: _showLabels),
             ],
           ),
 
@@ -281,7 +282,21 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
             ),
           ),
 
-          // ── 6. Stats panel (slides from right) ─────────────────
+          // ── 6. Label toggle button (bottom center) ────────────
+          Positioned(
+            bottom: 68,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: _MapBtn(
+                icon: _showLabels ? Icons.label_rounded : Icons.label_off_rounded,
+                onTap: () => setState(() => _showLabels = !_showLabels),
+                active: _showLabels,
+              ),
+            ),
+          ),
+
+          // ── 7. Stats panel (slides from right) ─────────────────
           AnimatedPositioned(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
@@ -352,8 +367,9 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
 class _MapBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final bool active;
 
-  const _MapBtn({required this.icon, required this.onTap});
+  const _MapBtn({required this.icon, required this.onTap, this.active = false});
 
   @override
   Widget build(BuildContext context) {
@@ -363,11 +379,19 @@ class _MapBtn extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.92),
+          color: active
+              ? AppColors.accent.withValues(alpha: 0.25)
+              : AppColors.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(
+            color: active ? AppColors.accent.withValues(alpha: 0.7) : AppColors.cardBorder,
+          ),
         ),
-        child: Icon(icon, color: AppColors.textSecondary, size: 16),
+        child: Icon(
+          icon,
+          color: active ? AppColors.accent : AppColors.textSecondary,
+          size: 16,
+        ),
       ),
     );
   }
@@ -1854,8 +1878,9 @@ const Set<String> _mediumCountries = {
 class _CountryOverlayWidget extends StatelessWidget {
   final GameStateModel game;
   final String? tappedId;
+  final bool showLabels;
 
-  const _CountryOverlayWidget({required this.game, this.tappedId});
+  const _CountryOverlayWidget({required this.game, this.tappedId, this.showLabels = true});
 
   @override
   Widget build(BuildContext context) {
@@ -1866,6 +1891,7 @@ class _CountryOverlayWidget extends StatelessWidget {
           game: game,
           tappedId: tappedId,
           camera: camera,
+          showLabels: showLabels,
         ),
       ),
     );
@@ -2372,11 +2398,13 @@ class _FullMapPainter extends CustomPainter {
   final GameStateModel game;
   final String? tappedId;
   final MapCamera camera;
+  final bool showLabels;
 
   _FullMapPainter({
     required this.game,
     this.tappedId,
     required this.camera,
+    this.showLabels = true,
   });
 
   double _haloRadius(String id) {
@@ -2465,36 +2493,38 @@ class _FullMapPainter extends CustomPainter {
       }
     }
 
-    // ── Country name labels ────────────────────────────────
-    for (final entry in CountryCoordinates.all.entries) {
-      final id = entry.key;
-      if (id == playerId) continue;
+    // ── Country name labels (skipped when showLabels = false) ─
+    if (showLabels) {
+      for (final entry in CountryCoordinates.all.entries) {
+        final id = entry.key;
+        if (id == playerId) continue;
 
-      final isAlly   = alliedIds.contains(id);
-      final isRival  = rivalIds.contains(id);
-      final isTapped = id == tappedId;
-      final isLarge  = _largeCountries.contains(id);
-      final isMedium = _mediumCountries.contains(id);
+        final isAlly   = alliedIds.contains(id);
+        final isRival  = rivalIds.contains(id);
+        final isTapped = id == tappedId;
+        final isLarge  = _largeCountries.contains(id);
+        final isMedium = _mediumCountries.contains(id);
 
-      if (!isAlly && !isRival && !isTapped) {
-        final minZoom = isLarge ? 2.0 : isMedium ? 3.5 : 5.0;
-        if (camera.zoom < minZoom) continue;
-      }
+        if (!isAlly && !isRival && !isTapped) {
+          final minZoom = isLarge ? 2.0 : isMedium ? 3.5 : 5.0;
+          if (camera.zoom < minZoom) continue;
+        }
 
-      final p = _toScreen(entry.value.dx, entry.value.dy);
-      if (!_inViewport(p, size)) continue;
-      final country = CountriesData.byCoordId(id);
-      if (country == null) continue;
-      final label = '${country.flag} ${country.name}';
+        final p = _toScreen(entry.value.dx, entry.value.dy);
+        if (!_inViewport(p, size)) continue;
+        final country = CountriesData.byCoordId(id);
+        if (country == null) continue;
+        final label = '${country.flag} ${country.name}';
 
-      if (isTapped) {
-        _drawCountryLabel(canvas, p, label, Colors.white, size);
-      } else if (isAlly) {
-        _drawCountryLabel(canvas, p, label, const Color(0xFF66BB6A), size);
-      } else if (isRival) {
-        _drawCountryLabel(canvas, p, label, const Color(0xFFEF5350), size);
-      } else {
-        _drawNeutralLabel(canvas, p, label, size, large: isLarge);
+        if (isTapped) {
+          _drawCountryLabel(canvas, p, label, Colors.white, size);
+        } else if (isAlly) {
+          _drawCountryLabel(canvas, p, label, const Color(0xFF66BB6A), size);
+        } else if (isRival) {
+          _drawCountryLabel(canvas, p, label, const Color(0xFFEF5350), size);
+        } else {
+          _drawNeutralLabel(canvas, p, label, size, large: isLarge);
+        }
       }
     }
 
@@ -2508,7 +2538,10 @@ class _FullMapPainter extends CustomPainter {
         canvas.drawCircle(p, 14,
             Paint()..color = AppColors.accent.withValues(alpha: 0.40)..style = PaintingStyle.stroke..strokeWidth = 2.0);
         canvas.drawCircle(p, 7, Paint()..color = AppColors.accent);
-        _drawCountryLabel(canvas, p, '${game.country.flag} ${game.country.name}', AppColors.accent, size, glowing: true);
+        // Player label always shown regardless of toggle (so you always know where you are)
+        if (showLabels) {
+          _drawCountryLabel(canvas, p, '${game.country.flag} ${game.country.name}', AppColors.accent, size, glowing: true);
+        }
       }
     }
   }
@@ -2568,5 +2601,6 @@ class _FullMapPainter extends CustomPainter {
       old.game.alliedCountries != game.alliedCountries ||
       old.game.sanctionedCountries != game.sanctionedCountries ||
       old.tappedId != tappedId ||
+      old.showLabels != showLabels ||
       old.camera != camera;
 }
