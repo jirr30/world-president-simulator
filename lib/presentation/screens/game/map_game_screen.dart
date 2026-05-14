@@ -27,31 +27,21 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   bool _showTutorial = false;
   bool _tutorialChecked = false;
   Size _mapSize = Size.zero;
-  Offset? _pendingTapMap; // in map coordinates (set by GestureDetector inside InteractiveViewer)
-  late final TransformationController _transformController;
-  double _currentZoom = 1.0;
+  GameStateModel? _currentGame;
+
+  // Manual pan/zoom (replaces InteractiveViewer) — supports horizontal loop
+  double _mapScale = 1.0;
+  // _mapPan.dx wraps in [0, screenW * _mapScale) for seamless horizontal looping
+  Offset _mapPan = Offset.zero;
+  Offset? _scaleStartFocal;
+  Offset _scaleStartPan = Offset.zero;
+  double _scaleStartScale = 1.0;
+  bool _gestureMovedSignificantly = false;
 
   @override
   void initState() {
     super.initState();
-    _transformController = TransformationController();
-    _transformController.addListener(_onTransformChanged);
-    // Re-apply fullscreen when returning from sub-screens (events, policies, etc.)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  }
-
-  void _onTransformChanged() {
-    final zoom = _transformController.value.getMaxScaleOnAxis();
-    if ((zoom - _currentZoom).abs() > 0.08) {
-      setState(() => _currentZoom = zoom);
-    }
-  }
-
-  @override
-  void dispose() {
-    _transformController.removeListener(_onTransformChanged);
-    _transformController.dispose();
-    super.dispose();
   }
 
   Offset _project(double lat, double lng, Size size) {
@@ -62,64 +52,134 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     return Offset(x.clamp(0.0, size.width), y.clamp(0.0, size.height));
   }
 
-  void _handleTap() {
-    final mapPos = _pendingTapMap;
-    _pendingTapMap = null;
-    if (mapPos == null || _mapSize == Size.zero) return;
+  void _onScaleStart(ScaleStartDetails d) {
+    _scaleStartFocal = d.localFocalPoint;
+    _scaleStartPan = _mapPan;
+    _scaleStartScale = _mapScale;
+    _gestureMovedSignificantly = false;
+  }
 
-    // Tap threshold scales inversely with zoom (smaller target in zoomed-out view)
-    final threshold = 44.0 / _currentZoom;
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    if (_mapSize == Size.zero || _scaleStartFocal == null) return;
+    final sw = _mapSize.width;
+    final sh = _mapSize.height;
 
+    if ((d.localFocalPoint - _scaleStartFocal!).distance > 12 ||
+        (d.scale - 1.0).abs() > 0.05) {
+      _gestureMovedSignificantly = true;
+    }
+
+    final newScale = (_scaleStartScale * d.scale).clamp(1.0, 8.0);
+
+    // Keep the map point under the gesture's start focal point pinned to
+    // the current focal point position on screen.
+    final mx = (_scaleStartFocal!.dx - _scaleStartPan.dx) / _scaleStartScale;
+    final my = (_scaleStartFocal!.dy - _scaleStartPan.dy) / _scaleStartScale;
+    var newDx = d.localFocalPoint.dx - mx * newScale;
+    var newDy = d.localFocalPoint.dy - my * newScale;
+
+    // Clamp Y so the map always covers the screen vertically.
+    newDy = newDy.clamp(sh - sh * newScale, 0.0);
+
+    // Wrap X into [0, sw*newScale) for seamless horizontal looping.
+    final mapW = sw * newScale;
+    newDx = newDx - (newDx / mapW).floor() * mapW;
+
+    setState(() {
+      _mapScale = newScale;
+      _mapPan = Offset(newDx, newDy);
+    });
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    if (!_gestureMovedSignificantly && _scaleStartFocal != null) {
+      _onMapTap(_scaleStartFocal!);
+    }
+  }
+
+  void _onMapTap(Offset screenPos) {
+    if (_mapSize == Size.zero) return;
+    final sw = _mapSize.width;
+    final sh = _mapSize.height;
+    final game = _currentGame;
+    if (game == null) return;
+
+    // Convert screen coords → map-logical coords with horizontal wrap.
+    var mx = (screenPos.dx - _mapPan.dx) / _mapScale;
+    var my = (screenPos.dy - _mapPan.dy) / _mapScale;
+    mx = mx - (mx / sw).floor() * sw;
+    final mapPos = Offset(mx.clamp(0.0, sw), my.clamp(0.0, sh));
+
+    final threshold = 44.0 / _mapScale;
     String? nearest;
     double nearestDist = threshold;
     for (final entry in CountryCoordinates.all.entries) {
       final pos = _project(entry.value.dx, entry.value.dy, _mapSize);
-      final d = (mapPos - pos).distance;
-      if (d < nearestDist) {
-        nearestDist = d;
+      final dist = (mapPos - pos).distance;
+      if (dist < nearestDist) {
+        nearestDist = dist;
         nearest = entry.key;
       }
     }
 
+    if (nearest == null || nearest == _tappedCountryId) {
+      setState(() => _tappedCountryId = null);
+      return;
+    }
+
     setState(() {
-      _tappedCountryId =
-          (nearest != null && nearest != _tappedCountryId) ? nearest : null;
+      _tappedCountryId = nearest;
       _showStatsPanel = false;
     });
+
+    final tappedCountry = CountriesData.byCoordId(nearest);
+    if (tappedCountry == null || !mounted) return;
+
+    final playerCoordId =
+        CountryCoordinates.resolveId(game.country.name) ??
+        CountryCoordinates.nameToId(game.country.name);
+    final isPlayer = nearest == playerCoordId;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => _CountryDialog(
+        country: tappedCountry,
+        game: game,
+        isPlayer: isPlayer,
+      ),
+    ).then((_) => setState(() => _tappedCountryId = null));
   }
 
   void _zoomBy(double factor) {
     if (_mapSize == Size.zero) return;
-    final m = _transformController.value;
-    final currentScale = m.getMaxScaleOnAxis();
-    final newScale = (currentScale * factor).clamp(1.0, 8.0);
-    if ((newScale - currentScale).abs() < 0.01) return;
+    final sw = _mapSize.width;
+    final sh = _mapSize.height;
+    final newScale = (_mapScale * factor).clamp(1.0, 8.0);
+    if ((newScale - _mapScale).abs() < 0.01) return;
 
-    // Zoom centered on screen center
-    final cx = _mapSize.width / 2;
-    final cy = _mapSize.height / 2;
-    // focal point in map coords
-    final s = currentScale;
-    final tx = m[12];
-    final ty = m[13];
-    final fx = (cx - tx) / s;
-    final fy = (cy - ty) / s;
-    // New translation to keep focal point at screen center
-    final ntx = cx - fx * newScale;
-    final nty = cy - fy * newScale;
-    // Clamp translation so map stays within screen
-    final maxTx = 0.0;
-    final minTx = -(newScale - 1) * _mapSize.width;
-    final maxTy = 0.0;
-    final minTy = -(newScale - 1) * _mapSize.height;
+    final cx = sw / 2;
+    final cy = sh / 2;
+    final mx = (cx - _mapPan.dx) / _mapScale;
+    final my = (cy - _mapPan.dy) / _mapScale;
+    var newDx = cx - mx * newScale;
+    var newDy = cy - my * newScale;
 
-    _transformController.value = Matrix4.identity()
-      ..translate(ntx.clamp(minTx, maxTx), nty.clamp(minTy, maxTy))
-      ..scale(newScale);
+    newDy = newDy.clamp(sh - sh * newScale, 0.0);
+    final mapW = sw * newScale;
+    newDx = newDx - (newDx / mapW).floor() * mapW;
+
+    setState(() {
+      _mapScale = newScale;
+      _mapPan = Offset(newDx, newDy);
+    });
   }
 
   void _resetZoom() {
-    _transformController.value = Matrix4.identity();
+    setState(() {
+      _mapScale = 1.0;
+      _mapPan = Offset.zero;
+    });
   }
 
   void _onAdvanceYear(GameStateModel game) {
@@ -186,6 +246,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       );
     }
 
+    _currentGame = game;
+
     // Show tutorial on first play
     if (!_tutorialChecked) {
       _tutorialChecked = true;
@@ -198,56 +260,49 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
 
     final approvalColor = AppColors.approvalColor(game.approvalRating);
 
-    CountryModel? tappedCountry;
-    if (_tappedCountryId != null) {
-      tappedCountry = CountriesData.byCoordId(_tappedCountryId!);
-    }
-    final showCountryPanel = tappedCountry != null && !_showStatsPanel;
-    final isPlayerTapped = _tappedCountryId == game.country.id;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0C2340),
       extendBody: true,
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // ── 1. Fullscreen interactive map ──────────────────────
+          // ── 1. Fullscreen interactive map (horizontal-looping) ──
           LayoutBuilder(
             builder: (context, constraints) {
               _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
-              return InteractiveViewer(
-                transformationController: _transformController,
-                minScale: 1.0,
-                maxScale: 8.0,
-                boundaryMargin: EdgeInsets.zero,
-                clipBehavior: Clip.hardEdge,
-                child: SizedBox(
-                  width: _mapSize.width,
-                  height: _mapSize.height,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (d) => _pendingTapMap = d.localPosition,
-                    onTap: _handleTap,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // ── Accurate world map SVG (fills exact screen bounds) ──
-                        SvgPicture.asset(
-                          'assets/images/world_map.svg',
-                          fit: BoxFit.fill,
-                          width: _mapSize.width,
-                          height: _mapSize.height,
-                        ),
-                        // ── Interactive overlay (markers, labels) ──
-                        CustomPaint(
-                          painter: _FullMapPainter(
-                            game: game,
-                            tappedId: _tappedCountryId,
-                            zoom: _currentZoom,
+              final sw = _mapSize.width;
+              final sh = _mapSize.height;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onScaleStart: _onScaleStart,
+                onScaleUpdate: _onScaleUpdate,
+                onScaleEnd: _onScaleEnd,
+                child: ClipRect(
+                  child: Stack(
+                    children: [
+                      // ── 3 tiled SVG copies for seamless horizontal loop ──
+                      for (int k = -1; k <= 1; k++)
+                        Positioned(
+                          left: _mapPan.dx + k * sw * _mapScale,
+                          top: _mapPan.dy,
+                          width: sw * _mapScale,
+                          height: sh * _mapScale,
+                          child: SvgPicture.asset(
+                            'assets/images/world_map.svg',
+                            fit: BoxFit.fill,
                           ),
                         ),
-                      ],
-                    ),
+                      // ── Interactive overlay (markers, labels) ──
+                      CustomPaint(
+                        size: Size(sw, sh),
+                        painter: _FullMapPainter(
+                          game: game,
+                          tappedId: _tappedCountryId,
+                          mapPan: _mapPan,
+                          mapScale: _mapScale,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -304,7 +359,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                   icon: Icons.remove_rounded,
                   onTap: () => _zoomBy(1 / 1.5),
                 ),
-                if (_currentZoom > 1.2) ...[
+                if (_mapScale > 1.2) ...[
                   const SizedBox(height: 4),
                   _MapBtn(
                     icon: Icons.center_focus_strong_rounded,
@@ -313,23 +368,6 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                 ],
               ],
             ),
-          ),
-
-          // ── 5. Country info panel (slides from right) ──────────
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
-            right: showCountryPanel ? 0 : -272,
-            top: 50, bottom: 60,
-            width: 268,
-            child: showCountryPanel
-                ? _CountryPanel(
-                    country: tappedCountry,
-                    game: game,
-                    isPlayer: isPlayerTapped,
-                    onClose: () => setState(() => _tappedCountryId = null),
-                  )
-                : const SizedBox.shrink(),
           ),
 
           // ── 6. Stats panel (slides from right) ─────────────────
@@ -1022,6 +1060,346 @@ class _CapitalChip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Country info dialog (shown on map tap, matches reference game style)
+// ─────────────────────────────────────────────────────────────────────────────
+class _CountryDialog extends ConsumerStatefulWidget {
+  final CountryModel country;
+  final GameStateModel game;
+  final bool isPlayer;
+
+  const _CountryDialog({
+    required this.country,
+    required this.game,
+    required this.isPlayer,
+  });
+
+  @override
+  ConsumerState<_CountryDialog> createState() => _CountryDialogState();
+}
+
+class _CountryDialogState extends ConsumerState<_CountryDialog> {
+  @override
+  Widget build(BuildContext context) {
+    final game = ref.watch(gameProvider) ?? widget.game;
+    final country = widget.country;
+    final capital = game.politicalCapital;
+
+    final playerAlly     = game.alliedCountries.contains(country.name);
+    final nativeAlly     = game.country.allies.contains(country.name);
+    final playerSanction = game.sanctionedCountries.contains(country.name);
+    final nativeRival    = game.country.rivals.contains(country.name);
+    final isAlly  = playerAlly  || nativeAlly;
+    final isRival = playerSanction || nativeRival;
+
+    final Color relationColor;
+    final String relationLabel;
+    if (widget.isPlayer) {
+      relationColor = AppColors.accent;
+      relationLabel = 'Your Nation';
+    } else if (isAlly) {
+      relationColor = const Color(0xFF4CAF50);
+      relationLabel = playerAlly ? 'Allied' : 'Historic Ally';
+    } else if (isRival) {
+      relationColor = AppColors.danger;
+      relationLabel = playerSanction ? 'Sanctioned' : 'Rival';
+    } else {
+      relationColor = AppColors.textSecondary;
+      relationLabel = 'Neutral';
+    }
+
+    void doAction(VoidCallback action, String successMsg, Color color) {
+      action();
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(successMsg, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ));
+    }
+
+    void notEnoughCapital(int need) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('💎 Not enough Political Capital (need $need, have $capital)',
+            style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.danger,
+        duration: const Duration(seconds: 2),
+      ));
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 480),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: relationColor.withValues(alpha: 0.35), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 30, offset: const Offset(0, 8)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Header banner ──────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              decoration: BoxDecoration(
+                color: relationColor.withValues(alpha: 0.10),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                border: const Border(bottom: BorderSide(color: AppColors.cardBorder)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Text(country.flag, style: const TextStyle(fontSize: 28)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              country.name.toUpperCase(),
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                letterSpacing: 1.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${country.name} · ${country.capital}',
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: relationColor.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: relationColor.withValues(alpha: 0.45)),
+                        ),
+                        child: Text(
+                          relationLabel,
+                          style: TextStyle(color: relationColor, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Stats row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _StatBadge(label: 'Population', value: country.populationFormatted, icon: Icons.people_rounded, color: AppColors.diplomacy),
+                      _StatBadge(label: 'GDP', value: country.gdpFormatted, icon: Icons.trending_up_rounded, color: AppColors.economy),
+                      _StatBadge(label: 'HDI', value: country.humanDevelopmentIndex.toStringAsFixed(2), icon: Icons.school_rounded, color: AppColors.social),
+                      _StatBadge(label: 'Continent', value: country.continent, icon: Icons.public_rounded, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Diplomacy actions ──────────────────────────
+            if (!widget.isPlayer) ...[
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('DIPLOMACY', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (playerAlly)
+                            _DialogActionBtn(
+                              icon: Icons.handshake_rounded,
+                              label: 'Break Alliance',
+                              sub: '💎${SimulationEngine.breakCost}',
+                              color: AppColors.warning,
+                              canAfford: capital >= SimulationEngine.breakCost,
+                              onTap: () => doAction(
+                                () => ref.read(gameProvider.notifier).breakAlliance(country.name),
+                                '🤝 Alliance with ${country.name} ended.',
+                                AppColors.warning,
+                              ),
+                              onNoCapital: () => notEnoughCapital(SimulationEngine.breakCost),
+                            )
+                          else if (nativeAlly)
+                            _DialogActionBtn(icon: Icons.handshake_rounded, label: 'Historic Ally', sub: 'Cannot break', color: const Color(0xFF4CAF50), canAfford: false, onTap: () {}, onNoCapital: () {})
+                          else if (!isRival)
+                            _DialogActionBtn(
+                              icon: Icons.handshake_rounded,
+                              label: 'Form Alliance',
+                              sub: '💎${SimulationEngine.allianceCost}',
+                              color: const Color(0xFF4CAF50),
+                              canAfford: capital >= SimulationEngine.allianceCost,
+                              requireRep: game.diplomaticReputation < 30,
+                              onTap: () => doAction(
+                                () => ref.read(gameProvider.notifier).proposeAlliance(country.name),
+                                '🤝 Alliance formed with ${country.name}!',
+                                const Color(0xFF4CAF50),
+                              ),
+                              onNoCapital: () => notEnoughCapital(SimulationEngine.allianceCost),
+                            ),
+                          if (playerSanction)
+                            _DialogActionBtn(
+                              icon: Icons.gavel_rounded,
+                              label: 'Lift Sanctions',
+                              sub: '💎${SimulationEngine.liftCost}',
+                              color: AppColors.diplomacy,
+                              canAfford: capital >= SimulationEngine.liftCost,
+                              onTap: () => doAction(
+                                () => ref.read(gameProvider.notifier).liftSanction(country.name),
+                                '✅ Sanctions on ${country.name} lifted.',
+                                AppColors.diplomacy,
+                              ),
+                              onNoCapital: () => notEnoughCapital(SimulationEngine.liftCost),
+                            )
+                          else if (nativeRival)
+                            _DialogActionBtn(icon: Icons.gavel_rounded, label: 'Historic Rival', sub: 'Fixed', color: AppColors.danger, canAfford: false, onTap: () {}, onNoCapital: () {})
+                          else if (!isAlly)
+                            _DialogActionBtn(
+                              icon: Icons.gavel_rounded,
+                              label: 'Impose Sanctions',
+                              sub: '💎${SimulationEngine.sanctionCost}',
+                              color: AppColors.danger,
+                              canAfford: capital >= SimulationEngine.sanctionCost,
+                              onTap: () => doAction(
+                                () => ref.read(gameProvider.notifier).imposeSanction(country.name),
+                                '⚠️ Sanctions on ${country.name} imposed.',
+                                AppColors.danger,
+                              ),
+                              onNoCapital: () => notEnoughCapital(SimulationEngine.sanctionCost),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _PanelRow('Capital', country.capital, Icons.location_city_rounded),
+                    _PanelRow('Government', _govLabel(country.governmentType), Icons.account_balance_rounded),
+                    _PanelRow('Population', country.populationFormatted, Icons.people_rounded),
+                    _PanelRow('GDP', country.gdpFormatted, Icons.trending_up_rounded),
+                    _PanelRow('HDI', country.humanDevelopmentIndex.toStringAsFixed(3), Icons.school_rounded),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatBadge({required this.label, required this.value, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 16),
+        const SizedBox(height: 3),
+        Text(value, style: TextStyle(color: color, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 11), maxLines: 1),
+        Text(label, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 8)),
+      ],
+    );
+  }
+}
+
+class _DialogActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sub;
+  final Color color;
+  final bool canAfford;
+  final bool requireRep;
+  final VoidCallback onTap;
+  final VoidCallback onNoCapital;
+
+  const _DialogActionBtn({
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.color,
+    required this.canAfford,
+    this.requireRep = false,
+    required this.onTap,
+    required this.onNoCapital,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = requireRep;
+    final effective = canAfford && !disabled;
+    final effectiveColor = disabled ? AppColors.textMuted : color;
+    return GestureDetector(
+      onTap: disabled ? null : (canAfford ? onTap : onNoCapital),
+      child: Container(
+        width: 130,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          color: effectiveColor.withValues(alpha: effective ? 0.12 : 0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: effectiveColor.withValues(alpha: effective ? 0.40 : 0.18)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: effectiveColor, size: 16),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: effectiveColor, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(sub, style: TextStyle(color: effectiveColor.withValues(alpha: 0.65), fontFamily: 'Poppins', fontSize: 8), maxLines: 1),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Country Info Panel
 // ─────────────────────────────────────────────────────────────────────────────
 class _CountryPanel extends ConsumerWidget {
@@ -1278,21 +1656,22 @@ class _CountryPanel extends ConsumerWidget {
     );
   }
 
-  String _govLabel(String type) {
-    const labels = <String, String>{
-      'democracy': 'Democracy',
-      'republic': 'Republic',
-      'constitutional_monarchy': 'Const. Monarchy',
-      'absolute_monarchy': 'Monarchy',
-      'communist': 'Communist',
-      'theocracy': 'Theocracy',
-      'authoritarian': 'Authoritarian',
-      'federal_republic': 'Federal Republic',
-      'parliamentary': 'Parliamentary',
-      'military_junta': 'Military Junta',
-    };
-    return labels[type] ?? type.replaceAll('_', ' ');
-  }
+}
+
+String _govLabel(String type) {
+  const labels = <String, String>{
+    'democracy': 'Democracy',
+    'republic': 'Republic',
+    'constitutional_monarchy': 'Const. Monarchy',
+    'absolute_monarchy': 'Monarchy',
+    'communist': 'Communist',
+    'theocracy': 'Theocracy',
+    'authoritarian': 'Authoritarian',
+    'federal_republic': 'Federal Republic',
+    'parliamentary': 'Parliamentary',
+    'military_junta': 'Military Junta',
+  };
+  return labels[type] ?? type.replaceAll('_', ' ');
 }
 
 class _DiplomacyButton extends StatelessWidget {
@@ -2415,22 +2794,29 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
 class _FullMapPainter extends CustomPainter {
   final GameStateModel game;
   final String? tappedId;
-  final double zoom;
+  final Offset mapPan;
+  final double mapScale;
 
-  _FullMapPainter({required this.game, this.tappedId, this.zoom = 1.0});
+  _FullMapPainter({
+    required this.game,
+    this.tappedId,
+    required this.mapPan,
+    required this.mapScale,
+  });
 
+  // Project lat/lng to SCREEN coordinates using current pan/scale.
   Offset _project(double lat, double lng, Size size) {
-    final x = (lng + 180) / 360 * size.width;
+    final mx = (lng + 180) / 360 * size.width;
     final latC = lat.clamp(-85.0, 85.0) * pi / 180;
     final mercN = log(tan(pi / 4 + latC / 2));
-    final y = size.height * (1 - (mercN + pi) / (2 * pi));
-    return Offset(x.clamp(0.0, size.width), y.clamp(0.0, size.height));
+    final my = size.height * (1 - (mercN + pi) / (2 * pi));
+    return Offset(mapPan.dx + mx * mapScale, mapPan.dy + my * mapScale);
   }
 
   double _haloRadius(String id) {
     if (_largeCountries.contains(id)) return 18.0;
     if (_mediumCountries.contains(id)) return 10.0;
-    return 0.0; // no halo
+    return 0.0;
   }
 
   double _dotRadius(String id) {
@@ -2439,13 +2825,18 @@ class _FullMapPainter extends CustomPainter {
     return 3.5;
   }
 
+  // Draw a single marker at screenPos for all 3 tiled copies.
+  void _forEachCopy(Size size, Offset screenPos, void Function(Offset p) draw) {
+    final step = size.width * mapScale;
+    for (int k = -1; k <= 1; k++) {
+      final p = Offset(screenPos.dx + k * step, screenPos.dy);
+      if (p.dx < -step || p.dx > size.width + step) continue;
+      draw(p);
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // SVG background handles ocean, land, grid lines, and continent colors.
-    // This painter draws only interactive markers on top.
-
-    // ── Build relationship sets ────────────────────────────────
     final alliedIds = <String>{};
     final rivalIds = <String>{};
     for (final name in [...game.alliedCountries, ...game.country.allies]) {
@@ -2456,11 +2847,10 @@ class _FullMapPainter extends CustomPainter {
       final id = CountryCoordinates.resolveId(name);
       if (id != null) rivalIds.add(id);
     }
-    // CountryCoordinates uses slugs ('china'), game.country.id uses ISO ('CN').
     final playerId = CountryCoordinates.resolveId(game.country.name) ??
         CountryCoordinates.nameToId(game.country.name);
 
-    // ── Territory halos for ally/rival countries ──────────────
+    // ── Territory halos ────────────────────────────────────
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
@@ -2469,25 +2859,23 @@ class _FullMapPainter extends CustomPainter {
       if (!isAlly && !isRival) continue;
       final halo = _haloRadius(id);
       if (halo <= 0) continue;
-      final pos = _project(entry.value.dx, entry.value.dy, size);
+      final base = _project(entry.value.dx, entry.value.dy, size);
       final haloColor = isAlly ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
-      canvas.drawCircle(pos, halo,
-          Paint()..color = haloColor.withValues(alpha: 0.18));
+      _forEachCopy(size, base, (p) {
+        canvas.drawCircle(p, halo, Paint()..color = haloColor.withValues(alpha: 0.18));
+      });
     }
 
     // Player halo
     final playerLatLng = CountryCoordinates.all[playerId];
     if (playerLatLng != null) {
-      final pos = _project(playerLatLng.dx, playerLatLng.dy, size);
-      canvas.drawCircle(
-        pos, 26,
-        Paint()..color = AppColors.accent.withValues(alpha: 0.12),
-      );
+      final base = _project(playerLatLng.dx, playerLatLng.dy, size);
+      _forEachCopy(size, base, (p) {
+        canvas.drawCircle(p, 26, Paint()..color = AppColors.accent.withValues(alpha: 0.12));
+      });
     }
 
-    // ── Country markers (only meaningful states) ──────────────
-    // Neutral countries have no dot — tap anywhere on the map to select.
-    // Only ally (green), rival (red), and tapped (white ring) get markers.
+    // ── Country markers (ally / rival / tapped only) ───────
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
@@ -2496,32 +2884,26 @@ class _FullMapPainter extends CustomPainter {
       final isTapped = id == tappedId;
       if (!isAlly && !isRival && !isTapped) continue;
 
-      final pos    = _project(entry.value.dx, entry.value.dy, size);
+      final base   = _project(entry.value.dx, entry.value.dy, size);
       final radius = _dotRadius(id);
 
-      if (isTapped) {
-        canvas.drawCircle(pos, radius + 8,
-            Paint()..color = Colors.white.withValues(alpha: 0.12));
-        canvas.drawCircle(pos, radius + 5,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.5
-              ..color = Colors.white.withValues(alpha: 0.7));
-        canvas.drawCircle(pos, radius + 1, Paint()..color = Colors.white);
-      } else if (isAlly) {
-        canvas.drawCircle(pos, radius + 1,
-            Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
-        canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFF4CAF50));
-      } else if (isRival) {
-        canvas.drawCircle(pos, radius + 1,
-            Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
-        canvas.drawCircle(pos, radius, Paint()..color = const Color(0xFFF44336));
-      }
+      _forEachCopy(size, base, (p) {
+        if (isTapped) {
+          canvas.drawCircle(p, radius + 8, Paint()..color = Colors.white.withValues(alpha: 0.12));
+          canvas.drawCircle(p, radius + 5,
+              Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5..color = Colors.white.withValues(alpha: 0.7));
+          canvas.drawCircle(p, radius + 1, Paint()..color = Colors.white);
+        } else if (isAlly) {
+          canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
+          canvas.drawCircle(p, radius, Paint()..color = const Color(0xFF4CAF50));
+        } else if (isRival) {
+          canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
+          canvas.drawCircle(p, radius, Paint()..color = const Color(0xFFF44336));
+        }
+      });
     }
 
-    // ── Country name labels ────────────────────────────────────
-    // Neutral labels: large=always, medium=zoom≥1.8, small=zoom≥3.0
-    // Ally / rival / tapped: always, with colored box.
+    // ── Country name labels ────────────────────────────────
     for (final entry in CountryCoordinates.all.entries) {
       final id = entry.key;
       if (id == playerId) continue;
@@ -2529,80 +2911,60 @@ class _FullMapPainter extends CustomPainter {
       final isAlly   = alliedIds.contains(id);
       final isRival  = rivalIds.contains(id);
       final isTapped = id == tappedId;
-
       final isLarge  = _largeCountries.contains(id);
       final isMedium = _mediumCountries.contains(id);
 
       if (!isAlly && !isRival && !isTapped) {
-        // Neutral — show based on country size and current zoom
         final minZoom = isLarge ? 1.0 : isMedium ? 1.8 : 3.0;
-        if (zoom < minZoom) continue;
+        if (mapScale < minZoom) continue;
       }
 
-      final pos = _project(entry.value.dx, entry.value.dy, size);
+      final base    = _project(entry.value.dx, entry.value.dy, size);
       final country = CountriesData.byCoordId(id);
       if (country == null) continue;
-
       final label = '${country.flag} ${country.name}';
 
-      if (isTapped) {
-        _drawCountryLabel(canvas, pos, label, Colors.white, size);
-      } else if (isAlly) {
-        _drawCountryLabel(canvas, pos, label, const Color(0xFF66BB6A), size);
-      } else if (isRival) {
-        _drawCountryLabel(canvas, pos, label, const Color(0xFFEF5350), size);
-      } else {
-        _drawNeutralLabel(canvas, pos, label, size, large: isLarge);
-      }
+      _forEachCopy(size, base, (p) {
+        if (isTapped) {
+          _drawCountryLabel(canvas, p, label, Colors.white, size);
+        } else if (isAlly) {
+          _drawCountryLabel(canvas, p, label, const Color(0xFF66BB6A), size);
+        } else if (isRival) {
+          _drawCountryLabel(canvas, p, label, const Color(0xFFEF5350), size);
+        } else {
+          _drawNeutralLabel(canvas, p, label, size, large: isLarge);
+        }
+      });
     }
 
-    // ── Player country (top layer) ─────────────────────────────
+    // ── Player country (top layer) ─────────────────────────
     if (playerLatLng != null) {
-      final pos = _project(playerLatLng.dx, playerLatLng.dy, size);
-
-      // Glow rings
-      for (var ring = 4; ring >= 1; ring--) {
-        canvas.drawCircle(
-          pos, ring * 6.5,
-          Paint()..color = AppColors.accent.withValues(alpha: 0.06 * ring),
-        );
-      }
-      canvas.drawCircle(
-        pos, 13,
-        Paint()
-          ..color = AppColors.accent.withValues(alpha: 0.35)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8,
-      );
-      canvas.drawCircle(pos, 7, Paint()..color = AppColors.accent);
-
-      _drawCountryLabel(
-        canvas, pos,
-        '${game.country.flag} ${game.country.name}',
-        AppColors.accent, size,
-        glowing: true,
-      );
+      final base = _project(playerLatLng.dx, playerLatLng.dy, size);
+      _forEachCopy(size, base, (p) {
+        for (var ring = 4; ring >= 1; ring--) {
+          canvas.drawCircle(p, ring * 6.5, Paint()..color = AppColors.accent.withValues(alpha: 0.06 * ring));
+        }
+        canvas.drawCircle(p, 13,
+            Paint()..color = AppColors.accent.withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.8);
+        canvas.drawCircle(p, 7, Paint()..color = AppColors.accent);
+        _drawCountryLabel(canvas, p, '${game.country.flag} ${game.country.name}', AppColors.accent, size, glowing: true);
+      });
     }
   }
 
-  // Simple centered label for neutral countries — no background box, text shadow only.
   void _drawNeutralLabel(Canvas canvas, Offset pos, String text, Size mapSize, {bool large = false}) {
     final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: const Color(0xDDFFFFFF),
-          fontSize: large ? 9.5 : 8.5,
-          fontWeight: FontWeight.w600,
-          shadows: const [
-            Shadow(blurRadius: 3, color: Color(0xCC000000), offset: Offset(0, 1)),
-            Shadow(blurRadius: 6, color: Color(0x88000000)),
-          ],
-        ),
-      ),
+      text: TextSpan(text: text, style: TextStyle(
+        color: const Color(0xDDFFFFFF),
+        fontSize: large ? 9.5 : 8.5,
+        fontWeight: FontWeight.w600,
+        shadows: const [
+          Shadow(blurRadius: 3, color: Color(0xCC000000), offset: Offset(0, 1)),
+          Shadow(blurRadius: 6, color: Color(0x88000000)),
+        ],
+      )),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: 150);
-
     double lx = pos.dx - tp.width / 2;
     double ly = pos.dy + 5;
     lx = lx.clamp(2.0, mapSize.width  - tp.width  - 2);
@@ -2610,34 +2972,22 @@ class _FullMapPainter extends CustomPainter {
     tp.paint(canvas, Offset(lx, ly));
   }
 
-  void _drawCountryLabel(
-    Canvas canvas, Offset pos, String text, Color color, Size mapSize, {
-    bool glowing = false,
-  }) {
+  void _drawCountryLabel(Canvas canvas, Offset pos, String text, Color color, Size mapSize, {bool glowing = false}) {
     final style = TextStyle(
       color: color,
       fontSize: glowing ? 11 : 9.5,
       fontWeight: glowing ? FontWeight.w700 : FontWeight.w600,
-      shadows: glowing
-          ? [Shadow(blurRadius: 5, color: color.withValues(alpha: 0.7))]
-          : null,
+      shadows: glowing ? [Shadow(blurRadius: 5, color: color.withValues(alpha: 0.7))] : null,
     );
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 160);
-
+    final tp = TextPainter(text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr)
+      ..layout(maxWidth: 160);
     double lx = pos.dx + (glowing ? 15 : 10);
     double ly = pos.dy - tp.height / 2;
     if (lx + tp.width > mapSize.width - 8) lx = pos.dx - tp.width - (glowing ? 15 : 10);
     if (ly < 20) ly = 20;
     if (ly + tp.height > mapSize.height - 20) ly = mapSize.height - 20 - tp.height;
-
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4),
-        const Radius.circular(4),
-      ),
+      RRect.fromRectAndRadius(Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4), const Radius.circular(4)),
       Paint()..color = const Color(0xD0060F1E),
     );
     tp.paint(canvas, Offset(lx, ly));
@@ -2649,5 +2999,6 @@ class _FullMapPainter extends CustomPainter {
       old.game.alliedCountries != game.alliedCountries ||
       old.game.sanctionedCountries != game.sanctionedCountries ||
       old.tappedId != tappedId ||
-      (old.zoom < 2.5) != (zoom < 2.5);
+      old.mapPan != mapPan ||
+      old.mapScale != mapScale;
 }
