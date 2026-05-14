@@ -445,21 +445,28 @@ class _HudIconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
+          shape: BoxShape.circle,
           color: active
-              ? color.withValues(alpha: 0.18)
-              : const Color(0x44071020),
-          borderRadius: BorderRadius.circular(10),
+              ? color.withValues(alpha: 0.22)
+              : const Color(0xCC071828),
           border: Border.all(
             color: active
-                ? color.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
-            width: 1.2,
+                ? color.withValues(alpha: 0.65)
+                : color.withValues(alpha: 0.30),
+            width: 1.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: active ? 0.25 : 0.10),
+              blurRadius: 6,
+              spreadRadius: 0,
+            ),
+          ],
         ),
-        child: Icon(icon, color: color, size: 18),
+        child: Icon(icon, color: color, size: 19),
       ),
     );
   }
@@ -622,7 +629,7 @@ class _BottomHudState extends State<_BottomHud>
           colors: [Color(0xD8071020), Color(0x00071020)],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(56, 18, 12, 8),
+      padding: const EdgeInsets.fromLTRB(56, 12, 12, 10),
       child: Row(
         children: [
           // Approval display with pulse when at risk
@@ -728,30 +735,38 @@ class _BottomHudState extends State<_BottomHud>
           const SizedBox(width: 8),
           GestureDetector(
             onTap: widget.onAdvanceYear,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.skip_next_rounded,
-                      size: 16, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${game.currentYear + 1}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      height: 1.0,
-                    ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accent,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accent.withValues(alpha: 0.45),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                  child: const Icon(Icons.skip_next_rounded,
+                      size: 22, color: Colors.white),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${game.currentYear + 1}',
+                  style: TextStyle(
+                    color: AppColors.accent.withValues(alpha: 0.85),
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 9,
+                    height: 1.0,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
