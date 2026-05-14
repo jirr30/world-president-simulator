@@ -30,9 +30,16 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   GameStateModel? _currentGame;
 
   // Manual pan/zoom (replaces InteractiveViewer) — supports horizontal loop
-  double _mapScale = 1.0;
-  // _mapPan.dx wraps in [0, screenW * _mapScale) for seamless horizontal looping
-  Offset _mapPan = Offset.zero;
+  final _panN   = ValueNotifier(Offset.zero);
+  final _scaleN = ValueNotifier(1.0);
+  late final Listenable _mapListen;
+
+  Offset get _mapPan   => _panN.value;
+  double get _mapScale => _scaleN.value;
+  void _setMapState(Offset pan, double scale) {
+    _panN.value   = pan;
+    _scaleN.value = scale;
+  }
   Offset? _scaleStartFocal;
   Offset _scaleStartPan = Offset.zero;
   double _scaleStartScale = 1.0;
@@ -41,7 +48,15 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   @override
   void initState() {
     super.initState();
+    _mapListen = Listenable.merge([_panN, _scaleN]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  @override
+  void dispose() {
+    _panN.dispose();
+    _scaleN.dispose();
+    super.dispose();
   }
 
   Offset _project(double lat, double lng, Size size) {
@@ -85,10 +100,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     final mapW = sw * newScale;
     newDx = newDx - (newDx / mapW).floor() * mapW;
 
-    setState(() {
-      _mapScale = newScale;
-      _mapPan = Offset(newDx, newDy);
-    });
+    _setMapState(Offset(newDx, newDy), newScale);
   }
 
   void _onScaleEnd(ScaleEndDetails d) {
@@ -169,18 +181,10 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     final mapW = sw * newScale;
     newDx = newDx - (newDx / mapW).floor() * mapW;
 
-    setState(() {
-      _mapScale = newScale;
-      _mapPan = Offset(newDx, newDy);
-    });
+    _setMapState(Offset(newDx, newDy), newScale);
   }
 
-  void _resetZoom() {
-    setState(() {
-      _mapScale = 1.0;
-      _mapPan = Offset.zero;
-    });
-  }
+  void _resetZoom() => _setMapState(Offset.zero, 1.0);
 
   void _onAdvanceYear(GameStateModel game) {
     showModalBottomSheet(
@@ -267,12 +271,14 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       body: Stack(
         children: [
           // ── 1. Fullscreen interactive map (horizontal-looping) ──
-          LayoutBuilder(
-            builder: (context, constraints) {
-              _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
-              final sw = _mapSize.width;
-              final sh = _mapSize.height;
-              return GestureDetector(
+          AnimatedBuilder(
+            animation: _mapListen,
+            builder: (_, __) => LayoutBuilder(
+              builder: (context, constraints) {
+                _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
+                final sw = _mapSize.width;
+                final sh = _mapSize.height;
+                return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onScaleStart: _onScaleStart,
                 onScaleUpdate: _onScaleUpdate,
@@ -307,6 +313,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                 ),
               );
             },
+            ),
           ),
 
           // ── 2. Top HUD ─────────────────────────────────────────
@@ -344,29 +351,23 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
           ),
 
           // ── 4. Zoom controls ───────────────────────────────────
-          Positioned(
-            left: 10,
-            bottom: 68,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _MapBtn(
-                  icon: Icons.add_rounded,
-                  onTap: () => _zoomBy(1.5),
-                ),
-                const SizedBox(height: 4),
-                _MapBtn(
-                  icon: Icons.remove_rounded,
-                  onTap: () => _zoomBy(1 / 1.5),
-                ),
-                if (_mapScale > 1.2) ...[
+          AnimatedBuilder(
+            animation: _mapListen,
+            builder: (_, __) => Positioned(
+              left: 10,
+              bottom: 68,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MapBtn(icon: Icons.add_rounded, onTap: () => _zoomBy(1.5)),
                   const SizedBox(height: 4),
-                  _MapBtn(
-                    icon: Icons.center_focus_strong_rounded,
-                    onTap: _resetZoom,
-                  ),
+                  _MapBtn(icon: Icons.remove_rounded, onTap: () => _zoomBy(1 / 1.5)),
+                  if (_mapScale > 1.2) ...[
+                    const SizedBox(height: 4),
+                    _MapBtn(icon: Icons.center_focus_strong_rounded, onTap: _resetZoom),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
 
@@ -2804,13 +2805,21 @@ class _FullMapPainter extends CustomPainter {
     required this.mapScale,
   });
 
-  // Project lat/lng to SCREEN coordinates using current pan/scale.
-  Offset _project(double lat, double lng, Size size) {
-    final mx = (lng + 180) / 360 * size.width;
-    final latC = lat.clamp(-85.0, 85.0) * pi / 180;
-    final mercN = log(tan(pi / 4 + latC / 2));
-    final my = size.height * (1 - (mercN + pi) / (2 * pi));
-    return Offset(mapPan.dx + mx * mapScale, mapPan.dy + my * mapScale);
+  // Cache: logical map coords per country — recomputed only on screen resize.
+  static final Map<int, Offset> _logCache = {};
+  static Size _logCacheSize = Size.zero;
+
+  // Returns logical map coordinates [0,W]×[0,H] — CACHED (no trig after first call).
+  Offset _logical(double lat, double lng, Size size) {
+    if (size != _logCacheSize) { _logCache.clear(); _logCacheSize = size; }
+    final key = lat.hashCode ^ (lng.hashCode * 397);
+    return _logCache.putIfAbsent(key, () {
+      final mx = (lng + 180) / 360 * size.width;
+      final latC = lat.clamp(-85.0, 85.0) * pi / 180;
+      final mercN = log(tan(pi / 4 + latC / 2));
+      final my = size.height * (1 - (mercN + pi) / (2 * pi));
+      return Offset(mx, my);
+    });
   }
 
   double _haloRadius(String id) {
@@ -2825,13 +2834,15 @@ class _FullMapPainter extends CustomPainter {
     return 3.5;
   }
 
-  // Draw a single marker at screenPos for all 3 tiled copies.
-  void _forEachCopy(Size size, Offset screenPos, void Function(Offset p) draw) {
+  // Draw at 3 tiled x-positions for seamless horizontal loop.
+  // 'logical' is map-logical coords from _logical(). Screen pos derived here.
+  void _forEachCopy(Size size, Offset logical, void Function(Offset screen) draw) {
     final step = size.width * mapScale;
     for (int k = -1; k <= 1; k++) {
-      final p = Offset(screenPos.dx + k * step, screenPos.dy);
-      if (p.dx < -step || p.dx > size.width + step) continue;
-      draw(p);
+      final sx = mapPan.dx + logical.dx * mapScale + k * step;
+      final sy = mapPan.dy + logical.dy * mapScale;
+      if (sx + step < 0 || sx - step > size.width) continue;
+      draw(Offset(sx, sy));
     }
   }
 
@@ -2859,7 +2870,7 @@ class _FullMapPainter extends CustomPainter {
       if (!isAlly && !isRival) continue;
       final halo = _haloRadius(id);
       if (halo <= 0) continue;
-      final base = _project(entry.value.dx, entry.value.dy, size);
+      final base = _logical(entry.value.dx, entry.value.dy, size);
       final haloColor = isAlly ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
       _forEachCopy(size, base, (p) {
         canvas.drawCircle(p, halo, Paint()..color = haloColor.withValues(alpha: 0.18));
@@ -2869,7 +2880,7 @@ class _FullMapPainter extends CustomPainter {
     // Player halo
     final playerLatLng = CountryCoordinates.all[playerId];
     if (playerLatLng != null) {
-      final base = _project(playerLatLng.dx, playerLatLng.dy, size);
+      final base = _logical(playerLatLng.dx, playerLatLng.dy, size);
       _forEachCopy(size, base, (p) {
         canvas.drawCircle(p, 26, Paint()..color = AppColors.accent.withValues(alpha: 0.12));
       });
@@ -2884,7 +2895,7 @@ class _FullMapPainter extends CustomPainter {
       final isTapped = id == tappedId;
       if (!isAlly && !isRival && !isTapped) continue;
 
-      final base   = _project(entry.value.dx, entry.value.dy, size);
+      final base   = _logical(entry.value.dx, entry.value.dy, size);
       final radius = _dotRadius(id);
 
       _forEachCopy(size, base, (p) {
@@ -2919,7 +2930,7 @@ class _FullMapPainter extends CustomPainter {
         if (mapScale < minZoom) continue;
       }
 
-      final base    = _project(entry.value.dx, entry.value.dy, size);
+      final base    = _logical(entry.value.dx, entry.value.dy, size);
       final country = CountriesData.byCoordId(id);
       if (country == null) continue;
       final label = '${country.flag} ${country.name}';
@@ -2939,7 +2950,7 @@ class _FullMapPainter extends CustomPainter {
 
     // ── Player country (top layer) ─────────────────────────
     if (playerLatLng != null) {
-      final base = _project(playerLatLng.dx, playerLatLng.dy, size);
+      final base = _logical(playerLatLng.dx, playerLatLng.dy, size);
       _forEachCopy(size, base, (p) {
         for (var ring = 4; ring >= 1; ring--) {
           canvas.drawCircle(p, ring * 6.5, Paint()..color = AppColors.accent.withValues(alpha: 0.06 * ring));
@@ -2953,10 +2964,12 @@ class _FullMapPainter extends CustomPainter {
   }
 
   void _drawNeutralLabel(Canvas canvas, Offset pos, String text, Size mapSize, {bool large = false}) {
+    final zoom = mapScale.clamp(1.0, 4.0);
+    final fontSize = (large ? 9.5 : 8.0) * zoom;
     final tp = TextPainter(
       text: TextSpan(text: text, style: TextStyle(
-        color: const Color(0xDDFFFFFF),
-        fontSize: large ? 9.5 : 8.5,
+        color: const Color(0xEEFFFFFF),
+        fontSize: fontSize,
         fontWeight: FontWeight.w600,
         shadows: const [
           Shadow(blurRadius: 3, color: Color(0xCC000000), offset: Offset(0, 1)),
@@ -2964,30 +2977,39 @@ class _FullMapPainter extends CustomPainter {
         ],
       )),
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 150);
+    )..layout(maxWidth: 160 * zoom);
+
+    // Center the label on the centroid (not below it)
     double lx = pos.dx - tp.width / 2;
-    double ly = pos.dy + 5;
+    double ly = pos.dy - tp.height / 2;
     lx = lx.clamp(2.0, mapSize.width  - tp.width  - 2);
     ly = ly.clamp(2.0, mapSize.height - tp.height - 2);
     tp.paint(canvas, Offset(lx, ly));
   }
 
   void _drawCountryLabel(Canvas canvas, Offset pos, String text, Color color, Size mapSize, {bool glowing = false}) {
+    final zoom = mapScale.clamp(1.0, 3.0);
     final style = TextStyle(
       color: color,
-      fontSize: glowing ? 11 : 9.5,
+      fontSize: (glowing ? 11.0 : 9.5) * zoom,
       fontWeight: glowing ? FontWeight.w700 : FontWeight.w600,
       shadows: glowing ? [Shadow(blurRadius: 5, color: color.withValues(alpha: 0.7))] : null,
     );
     final tp = TextPainter(text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr)
-      ..layout(maxWidth: 160);
-    double lx = pos.dx + (glowing ? 15 : 10);
+      ..layout(maxWidth: 180 * zoom);
+
+    // Position beside the dot; flip to left side if it would overflow right edge
+    final offset = (glowing ? 16.0 : 11.0) * zoom;
+    double lx = pos.dx + offset;
     double ly = pos.dy - tp.height / 2;
-    if (lx + tp.width > mapSize.width - 8) lx = pos.dx - tp.width - (glowing ? 15 : 10);
-    if (ly < 20) ly = 20;
-    if (ly + tp.height > mapSize.height - 20) ly = mapSize.height - 20 - tp.height;
+    if (lx + tp.width > mapSize.width - 8) lx = pos.dx - tp.width - offset;
+    ly = ly.clamp(2.0, mapSize.height - tp.height - 2);
+
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4), const Radius.circular(4)),
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4),
+        const Radius.circular(4),
+      ),
       Paint()..color = const Color(0xD0060F1E),
     );
     tp.paint(canvas, Offset(lx, ly));
