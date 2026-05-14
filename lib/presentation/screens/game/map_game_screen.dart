@@ -50,6 +50,23 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     super.initState();
     _mapListen = Listenable.merge([_panN, _scaleN]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnPlayer());
+  }
+
+  // Pan so the player's country appears centered on first load.
+  void _centerOnPlayer() {
+    if (_mapSize == Size.zero) return;
+    final game = _currentGame;
+    if (game == null) return;
+    final coordId = CountryCoordinates.resolveId(game.country.name)
+        ?? CountryCoordinates.nameToId(game.country.name);
+    final latLng = CountryCoordinates.all[coordId];
+    if (latLng == null) return;
+    final logical = _project(latLng.dx, latLng.dy, _mapSize);
+    final sw = _mapSize.width;
+    var dx = sw / 2 - logical.dx;
+    dx = dx - (dx / sw).floor() * sw;
+    _setMapState(Offset(dx, 0.0), 1.0);
   }
 
   @override
@@ -287,15 +304,25 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
                   child: Stack(
                     children: [
                       // ── 3 tiled SVG copies for seamless horizontal loop ──
+                      // Each copy renders SVG at fixed (sw×sh) into a GPU texture
+                      // via RepaintBoundary — scale/translate handled by GPU only,
+                      // so no SVG re-rasterization occurs during zoom or pan.
                       for (int k = -1; k <= 1; k++)
-                        Positioned(
-                          left: _mapPan.dx + k * sw * _mapScale,
-                          top: _mapPan.dy,
-                          width: sw * _mapScale,
-                          height: sh * _mapScale,
-                          child: SvgPicture.asset(
-                            'assets/images/world_map.svg',
-                            fit: BoxFit.fill,
+                        Transform.translate(
+                          offset: Offset(_mapPan.dx + k * sw * _mapScale, _mapPan.dy),
+                          child: Transform.scale(
+                            scale: _mapScale,
+                            alignment: Alignment.topLeft,
+                            child: RepaintBoundary(
+                              child: SizedBox(
+                                width: sw,
+                                height: sh,
+                                child: SvgPicture.asset(
+                                  'assets/images/world_map.svg',
+                                  fit: BoxFit.fill,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       // ── Interactive overlay (markers, labels) ──
@@ -2480,10 +2507,13 @@ class _FullMapPainter extends CustomPainter {
   // 'logical' is map-logical coords from _logical(). Screen pos derived here.
   void _forEachCopy(Size size, Offset logical, void Function(Offset screen) draw) {
     final step = size.width * mapScale;
+    const buf = 120.0; // viewport buffer in logical pixels
     for (int k = -1; k <= 1; k++) {
       final sx = mapPan.dx + logical.dx * mapScale + k * step;
       final sy = mapPan.dy + logical.dy * mapScale;
-      if (sx + step < 0 || sx - step > size.width) continue;
+      // Only draw when the country centroid is within the visible viewport + buffer.
+      if (sx < -buf || sx > size.width + buf) continue;
+      if (sy < -buf || sy > size.height + buf) continue;
       draw(Offset(sx, sy));
     }
   }
@@ -2621,11 +2651,9 @@ class _FullMapPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: 160 * zoom);
 
-    // Center the label on the centroid (not below it)
-    double lx = pos.dx - tp.width / 2;
-    double ly = pos.dy - tp.height / 2;
-    lx = lx.clamp(2.0, mapSize.width  - tp.width  - 2);
-    ly = ly.clamp(2.0, mapSize.height - tp.height - 2);
+    // Center label on the country centroid
+    final double lx = pos.dx - tp.width / 2;
+    final double ly = (pos.dy - tp.height / 2).clamp(2.0, mapSize.height - tp.height - 2);
     tp.paint(canvas, Offset(lx, ly));
   }
 
