@@ -1,9 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/buildings_data.dart';
 import '../../../data/datasources/country_coordinates.dart';
@@ -26,125 +26,46 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   bool _showStatsPanel = false;
   bool _showTutorial = false;
   bool _tutorialChecked = false;
-  Size _mapSize = Size.zero;
   GameStateModel? _currentGame;
 
-  // Manual pan/zoom (replaces InteractiveViewer) — supports horizontal loop
-  final _panN   = ValueNotifier(Offset.zero);
-  final _scaleN = ValueNotifier(1.0);
-  late final Listenable _mapListen;
-
-  Offset get _mapPan   => _panN.value;
-  double get _mapScale => _scaleN.value;
-  void _setMapState(Offset pan, double scale) {
-    _panN.value   = pan;
-    _scaleN.value = scale;
-  }
-  Offset? _scaleStartFocal;
-  Offset _scaleStartPan = Offset.zero;
-  double _scaleStartScale = 1.0;
-  bool _gestureMovedSignificantly = false;
+  late final MapController _mapController;
 
   @override
   void initState() {
     super.initState();
-    _mapListen = Listenable.merge([_panN, _scaleN]);
+    _mapController = MapController();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnPlayer());
   }
 
-  // Pan so the player's country appears centered on first load.
   void _centerOnPlayer() {
-    if (_mapSize == Size.zero) return;
     final game = _currentGame;
     if (game == null) return;
     final coordId = CountryCoordinates.resolveId(game.country.name)
         ?? CountryCoordinates.nameToId(game.country.name);
     final latLng = CountryCoordinates.all[coordId];
     if (latLng == null) return;
-    final logical = _project(latLng.dx, latLng.dy, _mapSize);
-    final sw = _mapSize.width;
-    var dx = sw / 2 - logical.dx;
-    dx = dx - (dx / sw).floor() * sw;
-    _setMapState(Offset(dx, 0.0), 1.0);
+    _mapController.move(LatLng(latLng.dx, latLng.dy), 3.5);
   }
 
   @override
   void dispose() {
-    _panN.dispose();
-    _scaleN.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
-  Offset _project(double lat, double lng, Size size) {
-    final x = (lng + 180) / 360 * size.width;
-    final latC = lat.clamp(-85.0, 85.0) * pi / 180;
-    final mercN = log(tan(pi / 4 + latC / 2));
-    final y = size.height * (1 - (mercN + pi) / (2 * pi));
-    return Offset(x.clamp(0.0, size.width), y.clamp(0.0, size.height));
-  }
-
-  void _onScaleStart(ScaleStartDetails d) {
-    _scaleStartFocal = d.localFocalPoint;
-    _scaleStartPan = _mapPan;
-    _scaleStartScale = _mapScale;
-    _gestureMovedSignificantly = false;
-  }
-
-  void _onScaleUpdate(ScaleUpdateDetails d) {
-    if (_mapSize == Size.zero || _scaleStartFocal == null) return;
-    final sw = _mapSize.width;
-    final sh = _mapSize.height;
-
-    if ((d.localFocalPoint - _scaleStartFocal!).distance > 12 ||
-        (d.scale - 1.0).abs() > 0.05) {
-      _gestureMovedSignificantly = true;
-    }
-
-    final newScale = (_scaleStartScale * d.scale).clamp(1.0, 8.0);
-
-    // Keep the map point under the gesture's start focal point pinned to
-    // the current focal point position on screen.
-    final mx = (_scaleStartFocal!.dx - _scaleStartPan.dx) / _scaleStartScale;
-    final my = (_scaleStartFocal!.dy - _scaleStartPan.dy) / _scaleStartScale;
-    var newDx = d.localFocalPoint.dx - mx * newScale;
-    var newDy = d.localFocalPoint.dy - my * newScale;
-
-    // Clamp Y so the map always covers the screen vertically.
-    newDy = newDy.clamp(sh - sh * newScale, 0.0);
-
-    // Wrap X into [0, sw*newScale) for seamless horizontal looping.
-    final mapW = sw * newScale;
-    newDx = newDx - (newDx / mapW).floor() * mapW;
-
-    _setMapState(Offset(newDx, newDy), newScale);
-  }
-
-  void _onScaleEnd(ScaleEndDetails d) {
-    if (!_gestureMovedSignificantly && _scaleStartFocal != null) {
-      _onMapTap(_scaleStartFocal!);
-    }
-  }
-
-  void _onMapTap(Offset screenPos) {
-    if (_mapSize == Size.zero) return;
-    final sw = _mapSize.width;
-    final sh = _mapSize.height;
+  void _onMapTap(TapPosition tapPosition, LatLng point) {
     final game = _currentGame;
     if (game == null) return;
+    final screenPos = tapPosition.relative ?? tapPosition.global;
+    final camera = _mapController.camera;
 
-    // Convert screen coords → map-logical coords with horizontal wrap.
-    var mx = (screenPos.dx - _mapPan.dx) / _mapScale;
-    var my = (screenPos.dy - _mapPan.dy) / _mapScale;
-    mx = mx - (mx / sw).floor() * sw;
-    final mapPos = Offset(mx.clamp(0.0, sw), my.clamp(0.0, sh));
-
-    final threshold = 44.0 / _mapScale;
+    const threshold = 44.0;
     String? nearest;
     double nearestDist = threshold;
     for (final entry in CountryCoordinates.all.entries) {
-      final pos = _project(entry.value.dx, entry.value.dy, _mapSize);
-      final dist = (mapPos - pos).distance;
+      final p = camera.getOffsetFromOrigin(LatLng(entry.value.dx, entry.value.dy));
+      final dist = (screenPos - p).distance;
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = entry.key;
@@ -180,28 +101,17 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     ).then((_) => setState(() => _tappedCountryId = null));
   }
 
-  void _zoomBy(double factor) {
-    if (_mapSize == Size.zero) return;
-    final sw = _mapSize.width;
-    final sh = _mapSize.height;
-    final newScale = (_mapScale * factor).clamp(1.0, 8.0);
-    if ((newScale - _mapScale).abs() < 0.01) return;
-
-    final cx = sw / 2;
-    final cy = sh / 2;
-    final mx = (cx - _mapPan.dx) / _mapScale;
-    final my = (cy - _mapPan.dy) / _mapScale;
-    var newDx = cx - mx * newScale;
-    var newDy = cy - my * newScale;
-
-    newDy = newDy.clamp(sh - sh * newScale, 0.0);
-    final mapW = sw * newScale;
-    newDx = newDx - (newDx / mapW).floor() * mapW;
-
-    _setMapState(Offset(newDx, newDy), newScale);
+  void _zoomIn() {
+    final z = _mapController.camera.zoom;
+    _mapController.move(_mapController.camera.center, (z + 1).clamp(1.5, 10.0));
   }
 
-  void _resetZoom() => _setMapState(Offset.zero, 1.0);
+  void _zoomOut() {
+    final z = _mapController.camera.zoom;
+    _mapController.move(_mapController.camera.center, (z - 1).clamp(1.5, 10.0));
+  }
+
+  void _resetView() => _mapController.move(const LatLng(20, 0), 2.5);
 
   void _onAdvanceYear(GameStateModel game) {
     showModalBottomSheet(
@@ -287,60 +197,38 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // ── 1. Fullscreen interactive map (horizontal-looping) ──
-          AnimatedBuilder(
-            animation: _mapListen,
-            builder: (_, __) => LayoutBuilder(
-              builder: (context, constraints) {
-                _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
-                final sw = _mapSize.width;
-                final sh = _mapSize.height;
-                return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onScaleStart: _onScaleStart,
-                onScaleUpdate: _onScaleUpdate,
-                onScaleEnd: _onScaleEnd,
-                child: ClipRect(
-                  child: Stack(
-                    children: [
-                      // ── 3 tiled SVG copies for seamless horizontal loop ──
-                      // Each copy renders SVG at fixed (sw×sh) into a GPU texture
-                      // via RepaintBoundary — scale/translate handled by GPU only,
-                      // so no SVG re-rasterization occurs during zoom or pan.
-                      for (int k = -1; k <= 1; k++)
-                        Transform.translate(
-                          offset: Offset(_mapPan.dx + k * sw * _mapScale, _mapPan.dy),
-                          child: Transform.scale(
-                            scale: _mapScale,
-                            alignment: Alignment.topLeft,
-                            child: RepaintBoundary(
-                              child: SizedBox(
-                                width: sw,
-                                height: sh,
-                                child: SvgPicture.asset(
-                                  'assets/images/world_map.svg',
-                                  fit: BoxFit.fill,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      // ── Interactive overlay (markers, labels) ──
-                      CustomPaint(
-                        size: Size(sw, sh),
-                        painter: _FullMapPainter(
-                          game: game,
-                          tappedId: _tappedCountryId,
-                          mapPan: _mapPan,
-                          mapScale: _mapScale,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          // ── 1. Fullscreen satellite map via flutter_map ─────────
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: const LatLng(20, 0),
+              initialZoom: 2.5,
+              minZoom: 1.5,
+              maxZoom: 10.0,
+              onTap: _onMapTap,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
             ),
+            children: [
+              // Esri satellite imagery base
+              TileLayer(
+                urlTemplate:
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                userAgentPackageName: 'com.example.world_president_simulator',
+              ),
+              // Country borders + place names overlay
+              Opacity(
+                opacity: 0.75,
+                child: TileLayer(
+                  urlTemplate:
+                      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                  userAgentPackageName: 'com.example.world_president_simulator',
+                ),
+              ),
+              // Game overlay: country markers, halos, labels
+              _CountryOverlayWidget(game: game, tappedId: _tappedCountryId),
+            ],
           ),
 
           // ── 2. Top HUD ─────────────────────────────────────────
@@ -377,24 +265,19 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
             ),
           ),
 
-          // ── 4. Zoom controls ───────────────────────────────────
-          AnimatedBuilder(
-            animation: _mapListen,
-            builder: (_, __) => Positioned(
-              left: 10,
-              bottom: 68,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _MapBtn(icon: Icons.add_rounded, onTap: () => _zoomBy(1.5)),
-                  const SizedBox(height: 4),
-                  _MapBtn(icon: Icons.remove_rounded, onTap: () => _zoomBy(1 / 1.5)),
-                  if (_mapScale > 1.2) ...[
-                    const SizedBox(height: 4),
-                    _MapBtn(icon: Icons.center_focus_strong_rounded, onTap: _resetZoom),
-                  ],
-                ],
-              ),
+          // ── 5. Zoom controls ───────────────────────────────────
+          Positioned(
+            left: 10,
+            bottom: 68,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MapBtn(icon: Icons.add_rounded, onTap: _zoomIn),
+                const SizedBox(height: 4),
+                _MapBtn(icon: Icons.remove_rounded, onTap: _zoomOut),
+                const SizedBox(height: 4),
+                _MapBtn(icon: Icons.center_focus_strong_rounded, onTap: _resetView),
+              ],
             ),
           ),
 
@@ -1966,6 +1849,30 @@ const Set<String> _mediumCountries = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Country overlay layer — rendered on top of the map tiles
+// ─────────────────────────────────────────────────────────────────────────────
+class _CountryOverlayWidget extends StatelessWidget {
+  final GameStateModel game;
+  final String? tappedId;
+
+  const _CountryOverlayWidget({required this.game, this.tappedId});
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = MapCamera.of(context);
+    return SizedBox.expand(
+      child: CustomPaint(
+        painter: _FullMapPainter(
+          game: game,
+          tappedId: tappedId,
+          camera: camera,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Advance Year — Confirm Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 class _AdvanceConfirmSheet extends StatelessWidget {
@@ -2464,32 +2371,13 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
 class _FullMapPainter extends CustomPainter {
   final GameStateModel game;
   final String? tappedId;
-  final Offset mapPan;
-  final double mapScale;
+  final MapCamera camera;
 
   _FullMapPainter({
     required this.game,
     this.tappedId,
-    required this.mapPan,
-    required this.mapScale,
+    required this.camera,
   });
-
-  // Cache: logical map coords per country — recomputed only on screen resize.
-  static final Map<int, Offset> _logCache = {};
-  static Size _logCacheSize = Size.zero;
-
-  // Returns logical map coordinates [0,W]×[0,H] — CACHED (no trig after first call).
-  Offset _logical(double lat, double lng, Size size) {
-    if (size != _logCacheSize) { _logCache.clear(); _logCacheSize = size; }
-    final key = lat.hashCode ^ (lng.hashCode * 397);
-    return _logCache.putIfAbsent(key, () {
-      final mx = (lng + 180) / 360 * size.width;
-      final latC = lat.clamp(-85.0, 85.0) * pi / 180;
-      final mercN = log(tan(pi / 4 + latC / 2));
-      final my = size.height * (1 - (mercN + pi) / (2 * pi));
-      return Offset(mx, my);
-    });
-  }
 
   double _haloRadius(String id) {
     if (_largeCountries.contains(id)) return 18.0;
@@ -2503,20 +2391,13 @@ class _FullMapPainter extends CustomPainter {
     return 3.5;
   }
 
-  // Draw at 3 tiled x-positions for seamless horizontal loop.
-  // 'logical' is map-logical coords from _logical(). Screen pos derived here.
-  void _forEachCopy(Size size, Offset logical, void Function(Offset screen) draw) {
-    final step = size.width * mapScale;
-    const buf = 120.0; // viewport buffer in logical pixels
-    for (int k = -1; k <= 1; k++) {
-      final sx = mapPan.dx + logical.dx * mapScale + k * step;
-      final sy = mapPan.dy + logical.dy * mapScale;
-      // Only draw when the country centroid is within the visible viewport + buffer.
-      if (sx < -buf || sx > size.width + buf) continue;
-      if (sy < -buf || sy > size.height + buf) continue;
-      draw(Offset(sx, sy));
-    }
-  }
+  // Convert lat/lng to screen offset via flutter_map's camera projection.
+  Offset _toScreen(double lat, double lng) =>
+      camera.getOffsetFromOrigin(LatLng(lat, lng));
+
+  bool _inViewport(Offset p, Size size, {double buf = 120}) =>
+      p.dx >= -buf && p.dx <= size.width + buf &&
+      p.dy >= -buf && p.dy <= size.height + buf;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2542,20 +2423,19 @@ class _FullMapPainter extends CustomPainter {
       if (!isAlly && !isRival) continue;
       final halo = _haloRadius(id);
       if (halo <= 0) continue;
-      final base = _logical(entry.value.dx, entry.value.dy, size);
+      final p = _toScreen(entry.value.dx, entry.value.dy);
+      if (!_inViewport(p, size)) continue;
       final haloColor = isAlly ? const Color(0xFF4CAF50) : const Color(0xFFF44336);
-      _forEachCopy(size, base, (p) {
-        canvas.drawCircle(p, halo, Paint()..color = haloColor.withValues(alpha: 0.18));
-      });
+      canvas.drawCircle(p, halo, Paint()..color = haloColor.withValues(alpha: 0.25));
     }
 
     // Player halo
     final playerLatLng = CountryCoordinates.all[playerId];
     if (playerLatLng != null) {
-      final base = _logical(playerLatLng.dx, playerLatLng.dy, size);
-      _forEachCopy(size, base, (p) {
-        canvas.drawCircle(p, 26, Paint()..color = AppColors.accent.withValues(alpha: 0.12));
-      });
+      final p = _toScreen(playerLatLng.dx, playerLatLng.dy);
+      if (_inViewport(p, size)) {
+        canvas.drawCircle(p, 30, Paint()..color = AppColors.accent.withValues(alpha: 0.12));
+      }
     }
 
     // ── Country markers (ally / rival / tapped only) ───────
@@ -2567,23 +2447,22 @@ class _FullMapPainter extends CustomPainter {
       final isTapped = id == tappedId;
       if (!isAlly && !isRival && !isTapped) continue;
 
-      final base   = _logical(entry.value.dx, entry.value.dy, size);
+      final p      = _toScreen(entry.value.dx, entry.value.dy);
+      if (!_inViewport(p, size)) continue;
       final radius = _dotRadius(id);
 
-      _forEachCopy(size, base, (p) {
-        if (isTapped) {
-          canvas.drawCircle(p, radius + 8, Paint()..color = Colors.white.withValues(alpha: 0.12));
-          canvas.drawCircle(p, radius + 5,
-              Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5..color = Colors.white.withValues(alpha: 0.7));
-          canvas.drawCircle(p, radius + 1, Paint()..color = Colors.white);
-        } else if (isAlly) {
-          canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
-          canvas.drawCircle(p, radius, Paint()..color = const Color(0xFF4CAF50));
-        } else if (isRival) {
-          canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
-          canvas.drawCircle(p, radius, Paint()..color = const Color(0xFFF44336));
-        }
-      });
+      if (isTapped) {
+        canvas.drawCircle(p, radius + 8, Paint()..color = Colors.white.withValues(alpha: 0.15));
+        canvas.drawCircle(p, radius + 5,
+            Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5..color = Colors.white.withValues(alpha: 0.7));
+        canvas.drawCircle(p, radius + 1, Paint()..color = Colors.white);
+      } else if (isAlly) {
+        canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFF4CAF50).withValues(alpha: 0.3));
+        canvas.drawCircle(p, radius, Paint()..color = const Color(0xFF4CAF50));
+      } else if (isRival) {
+        canvas.drawCircle(p, radius + 1, Paint()..color = const Color(0xFFF44336).withValues(alpha: 0.3));
+        canvas.drawCircle(p, radius, Paint()..color = const Color(0xFFF44336));
+      }
     }
 
     // ── Country name labels ────────────────────────────────
@@ -2598,81 +2477,79 @@ class _FullMapPainter extends CustomPainter {
       final isMedium = _mediumCountries.contains(id);
 
       if (!isAlly && !isRival && !isTapped) {
-        final minZoom = isLarge ? 1.0 : isMedium ? 1.8 : 3.0;
-        if (mapScale < minZoom) continue;
+        final minZoom = isLarge ? 2.0 : isMedium ? 3.5 : 5.0;
+        if (camera.zoom < minZoom) continue;
       }
 
-      final base    = _logical(entry.value.dx, entry.value.dy, size);
+      final p = _toScreen(entry.value.dx, entry.value.dy);
+      if (!_inViewport(p, size)) continue;
       final country = CountriesData.byCoordId(id);
       if (country == null) continue;
       final label = '${country.flag} ${country.name}';
 
-      _forEachCopy(size, base, (p) {
-        if (isTapped) {
-          _drawCountryLabel(canvas, p, label, Colors.white, size);
-        } else if (isAlly) {
-          _drawCountryLabel(canvas, p, label, const Color(0xFF66BB6A), size);
-        } else if (isRival) {
-          _drawCountryLabel(canvas, p, label, const Color(0xFFEF5350), size);
-        } else {
-          _drawNeutralLabel(canvas, p, label, size, large: isLarge);
-        }
-      });
+      if (isTapped) {
+        _drawCountryLabel(canvas, p, label, Colors.white, size);
+      } else if (isAlly) {
+        _drawCountryLabel(canvas, p, label, const Color(0xFF66BB6A), size);
+      } else if (isRival) {
+        _drawCountryLabel(canvas, p, label, const Color(0xFFEF5350), size);
+      } else {
+        _drawNeutralLabel(canvas, p, label, size, large: isLarge);
+      }
     }
 
     // ── Player country (top layer) ─────────────────────────
     if (playerLatLng != null) {
-      final base = _logical(playerLatLng.dx, playerLatLng.dy, size);
-      _forEachCopy(size, base, (p) {
+      final p = _toScreen(playerLatLng.dx, playerLatLng.dy);
+      if (_inViewport(p, size)) {
         for (var ring = 4; ring >= 1; ring--) {
-          canvas.drawCircle(p, ring * 6.5, Paint()..color = AppColors.accent.withValues(alpha: 0.06 * ring));
+          canvas.drawCircle(p, ring * 7.0, Paint()..color = AppColors.accent.withValues(alpha: 0.06 * ring));
         }
-        canvas.drawCircle(p, 13,
-            Paint()..color = AppColors.accent.withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 1.8);
+        canvas.drawCircle(p, 14,
+            Paint()..color = AppColors.accent.withValues(alpha: 0.40)..style = PaintingStyle.stroke..strokeWidth = 2.0);
         canvas.drawCircle(p, 7, Paint()..color = AppColors.accent);
         _drawCountryLabel(canvas, p, '${game.country.flag} ${game.country.name}', AppColors.accent, size, glowing: true);
-      });
+      }
     }
   }
 
   void _drawNeutralLabel(Canvas canvas, Offset pos, String text, Size mapSize, {bool large = false}) {
-    final zoom = mapScale.clamp(1.0, 4.0);
-    final fontSize = (large ? 9.5 : 8.0) * zoom;
+    // Mild scaling: each zoom level adds 30% size from the baseline (zoom 2.5)
+    final labelScale = (1.0 + (camera.zoom - 2.5) * 0.30).clamp(0.8, 2.5);
+    final fontSize = (large ? 9.5 : 8.0) * labelScale;
     final tp = TextPainter(
       text: TextSpan(text: text, style: TextStyle(
         color: const Color(0xEEFFFFFF),
         fontSize: fontSize,
         fontWeight: FontWeight.w600,
         shadows: const [
-          Shadow(blurRadius: 3, color: Color(0xCC000000), offset: Offset(0, 1)),
-          Shadow(blurRadius: 6, color: Color(0x88000000)),
+          Shadow(blurRadius: 4, color: Color(0xDD000000), offset: Offset(0, 1)),
+          Shadow(blurRadius: 8, color: Color(0xAA000000)),
         ],
       )),
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: 160 * zoom);
+    )..layout(maxWidth: 180 * labelScale);
 
-    // Center label on the country centroid
     final double lx = pos.dx - tp.width / 2;
     final double ly = (pos.dy - tp.height / 2).clamp(2.0, mapSize.height - tp.height - 2);
     tp.paint(canvas, Offset(lx, ly));
   }
 
   void _drawCountryLabel(Canvas canvas, Offset pos, String text, Color color, Size mapSize, {bool glowing = false}) {
-    final zoom = mapScale.clamp(1.0, 3.0);
+    final labelScale = (1.0 + (camera.zoom - 2.5) * 0.30).clamp(0.8, 2.5);
     final style = TextStyle(
       color: color,
-      fontSize: (glowing ? 11.0 : 9.5) * zoom,
+      fontSize: (glowing ? 11.0 : 9.5) * labelScale,
       fontWeight: glowing ? FontWeight.w700 : FontWeight.w600,
-      shadows: glowing ? [Shadow(blurRadius: 5, color: color.withValues(alpha: 0.7))] : null,
+      shadows: glowing ? [Shadow(blurRadius: 6, color: color.withValues(alpha: 0.8))] : null,
     );
     final tp = TextPainter(text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr)
-      ..layout(maxWidth: 180 * zoom);
+      ..layout(maxWidth: 200 * labelScale);
 
-    // Position beside the dot; flip to left side if it would overflow right edge
-    final offset = (glowing ? 16.0 : 11.0) * zoom;
-    double lx = pos.dx + offset;
+    final labelOffset = (glowing ? 16.0 : 12.0) * labelScale;
+    double lx = pos.dx + labelOffset;
     double ly = pos.dy - tp.height / 2;
-    if (lx + tp.width > mapSize.width - 8) lx = pos.dx - tp.width - offset;
+    if (lx + tp.width > mapSize.width - 8) lx = pos.dx - tp.width - labelOffset;
     ly = ly.clamp(2.0, mapSize.height - tp.height - 2);
 
     canvas.drawRRect(
@@ -2680,7 +2557,7 @@ class _FullMapPainter extends CustomPainter {
         Rect.fromLTWH(lx - 4, ly - 2, tp.width + 8, tp.height + 4),
         const Radius.circular(4),
       ),
-      Paint()..color = const Color(0xD0060F1E),
+      Paint()..color = const Color(0xD8060F1E),
     );
     tp.paint(canvas, Offset(lx, ly));
   }
@@ -2691,6 +2568,5 @@ class _FullMapPainter extends CustomPainter {
       old.game.alliedCountries != game.alliedCountries ||
       old.game.sanctionedCountries != game.sanctionedCountries ||
       old.tappedId != tappedId ||
-      old.mapPan != mapPan ||
-      old.mapScale != mapScale;
+      old.camera != camera;
 }
