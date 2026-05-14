@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/datasources/buildings_data.dart';
+import '../../../data/datasources/country_borders.dart';
 import '../../../data/datasources/country_coordinates.dart';
 import '../../../data/datasources/countries_data.dart';
 import '../../../data/datasources/events_data.dart';
@@ -36,6 +37,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     super.initState();
     _mapController = MapController();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    CountryBorders.load(); // load polygon data async in background
     WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnPlayer());
   }
 
@@ -58,18 +60,23 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   void _onMapTap(TapPosition tapPosition, LatLng point) {
     final game = _currentGame;
     if (game == null) return;
-    final screenPos = tapPosition.relative ?? tapPosition.global;
-    final camera = _mapController.camera;
 
-    const threshold = 44.0;
-    String? nearest;
-    double nearestDist = threshold;
-    for (final entry in CountryCoordinates.all.entries) {
-      final p = camera.getOffsetFromOrigin(LatLng(entry.value.dx, entry.value.dy));
-      final dist = (screenPos - p).distance;
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = entry.key;
+    // 1. Polygon hit-test: works anywhere on the country's territory.
+    String? nearest = CountryBorders.hitTest(point.latitude, point.longitude);
+
+    // 2. Centroid fallback (small islands / territories missing from 110m dataset).
+    if (nearest == null) {
+      final screenPos = tapPosition.relative ?? tapPosition.global;
+      final camera = _mapController.camera;
+      const threshold = 44.0;
+      double nearestDist = threshold;
+      for (final entry in CountryCoordinates.all.entries) {
+        final p = camera.getOffsetFromOrigin(LatLng(entry.value.dx, entry.value.dy));
+        final dist = (screenPos - p).distance;
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearest = entry.key;
+        }
       }
     }
 
