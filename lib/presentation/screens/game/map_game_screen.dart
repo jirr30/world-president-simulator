@@ -204,9 +204,10 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
             options: MapOptions(
               initialCenter: const LatLng(20, 0),
               initialZoom: 2.5,
-              minZoom: 1.5,
+              minZoom: 2.0,
               maxZoom: 10.0,
               onTap: _onMapTap,
+              cameraConstraint: const CameraConstraint.containLatitude(),
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
               ),
