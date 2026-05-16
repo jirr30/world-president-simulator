@@ -1,9 +1,10 @@
+import 'dart:math' show sqrt, atan2;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/buildings_data.dart';
@@ -29,6 +30,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   bool _showTutorial = false;
   bool _tutorialChecked = false;
   bool _showLabels = true;
+  bool _showInvasionAnim = false;
+  CountryModel? _attackerCountry;
   GameStateModel? _currentGame;
 
   late final MapController _mapController;
@@ -170,6 +173,17 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     // Forced events (e.g. tax protests) always fire regardless of year schedule
     final forced = SimulationEngine.getForcedEvent(state);
     if (forced != null) {
+      if (forced.id == 'foreign_invasion') {
+        final others = CountriesData.all
+            .where((c) => c.id != state.country.id)
+            .toList()
+          ..shuffle();
+        setState(() {
+          _attackerCountry = others.first;
+          _showInvasionAnim = true;
+        });
+        return; // _onInvasionAnimDone will navigate to /event
+      }
       ref.read(pendingEventProvider.notifier).state = forced;
       context.go('/event');
       return;
@@ -180,6 +194,18 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
         ref.read(pendingEventProvider.notifier).state = events.first;
         context.go('/event');
       }
+    }
+  }
+
+  void _onInvasionAnimDone() {
+    if (!mounted) return;
+    setState(() => _showInvasionAnim = false);
+    final state = ref.read(gameProvider);
+    if (state == null) return;
+    final forced = SimulationEngine.getForcedEvent(state);
+    if (forced != null) {
+      ref.read(pendingEventProvider.notifier).state = forced;
+      context.go('/event');
     }
   }
 
@@ -326,7 +352,18 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
             ),
           ),
 
-          // ── 7. Tutorial overlay (first play) ───────────────────
+          // ── 7. Invasion animation overlay ──────────────────────
+          if (_showInvasionAnim && _attackerCountry != null)
+            Positioned.fill(
+              child: _InvasionAnimationOverlay(
+                attacker: _attackerCountry!,
+                target: game.country,
+                mapController: _mapController,
+                onDone: _onInvasionAnimDone,
+              ),
+            ),
+
+          // ── 8. Tutorial overlay (first play) ───────────────────
           if (_showTutorial)
             Positioned.fill(
               child: _TutorialOverlay(
@@ -2670,4 +2707,367 @@ class _FullMapPainter extends CustomPainter {
       old.tappedId != tappedId ||
       old.showLabels != showLabels ||
       old.camera != camera;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Invasion Animation Overlay
+// ─────────────────────────────────────────────────────────────────────────────
+class _InvasionAnimationOverlay extends StatefulWidget {
+  final CountryModel attacker;
+  final CountryModel target;
+  final MapController mapController;
+  final VoidCallback onDone;
+
+  const _InvasionAnimationOverlay({
+    required this.attacker,
+    required this.target,
+    required this.mapController,
+    required this.onDone,
+  });
+
+  @override
+  State<_InvasionAnimationOverlay> createState() =>
+      _InvasionAnimationOverlayState();
+}
+
+class _InvasionAnimationOverlayState extends State<_InvasionAnimationOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _lineCtrl;
+  late final AnimationController _impactCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _lineCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+    _impactCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _lineCtrl.forward().then((_) async {
+      if (!mounted) return;
+      await _impactCtrl.forward();
+      await Future.delayed(const Duration(milliseconds: 350));
+      widget.onDone();
+    });
+  }
+
+  @override
+  void dispose() {
+    _lineCtrl.dispose();
+    _impactCtrl.dispose();
+    super.dispose();
+  }
+
+  static LatLng? _coords(CountryModel c) {
+    final id = CountryCoordinates.resolveId(c.name) ??
+        CountryCoordinates.nameToId(c.name);
+    final o = CountryCoordinates.all[id];
+    return o == null ? null : LatLng(o.dx, o.dy);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final attackerLatLng = _coords(widget.attacker);
+    final targetLatLng = _coords(widget.target);
+
+    if (attackerLatLng == null || targetLatLng == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDone());
+      return const SizedBox.shrink();
+    }
+
+    final camera = widget.mapController.camera;
+    final attackerPx = camera.getOffsetFromOrigin(attackerLatLng);
+    final targetPx = camera.getOffsetFromOrigin(targetLatLng);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_lineCtrl, _impactCtrl]),
+      builder: (context, _) {
+        final lineT = CurvedAnimation(
+          parent: _lineCtrl,
+          curve: Curves.easeInOut,
+        ).value;
+        final impactT = _impactCtrl.value;
+
+        return Stack(
+          children: [
+            // Dim overlay so the arc pops visually
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(color: Colors.black.withValues(alpha: 0.30)),
+              ),
+            ),
+            // Arc + units + explosion rings
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _InvasionArcPainter(
+                    attackerPos: attackerPx,
+                    targetPos: targetPx,
+                    progress: lineT,
+                    impactProgress: impactT,
+                  ),
+                ),
+              ),
+            ),
+            // Screen red flash on impact
+            if (impactT > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.red.withValues(alpha: 0.22 * (1.0 - impactT)),
+                  ),
+                ),
+              ),
+            // Attacker country label near attacker dot
+            if (lineT > 0.02)
+              Positioned(
+                left: attackerPx.dx - 50,
+                top: attackerPx.dy - 54,
+                child: _InvasionLabel(attacker: widget.attacker),
+              ),
+            // "INCOMING ATTACK" banner at top-center
+            Positioned(
+              top: 56,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 400),
+                  builder: (_, v, __) => Opacity(
+                    opacity: v,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade900.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.5),
+                              blurRadius: 16)
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('⚔️', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${widget.attacker.flag}  ${widget.attacker.name.toUpperCase()}  IS ATTACKING!',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _InvasionLabel extends StatelessWidget {
+  final CountryModel attacker;
+  const _InvasionLabel({required this.attacker});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xCC7B0000),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade400),
+        boxShadow: [
+          BoxShadow(color: Colors.red.withValues(alpha: 0.5), blurRadius: 10)
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(attacker.flag, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 5),
+          Text(
+            attacker.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Invasion Arc CustomPainter
+// ─────────────────────────────────────────────────────────────────────────────
+class _InvasionArcPainter extends CustomPainter {
+  final Offset attackerPos;
+  final Offset targetPos;
+  final double progress;     // 0 → 1: line growth + unit movement
+  final double impactProgress; // 0 → 1: explosion rings
+
+  _InvasionArcPainter({
+    required this.attackerPos,
+    required this.targetPos,
+    required this.progress,
+    required this.impactProgress,
+  });
+
+  Offset get _controlPoint {
+    final mid = (attackerPos + targetPos) / 2;
+    final dx = targetPos.dx - attackerPos.dx;
+    final dy = targetPos.dy - attackerPos.dy;
+    final len = sqrt(dx * dx + dy * dy);
+    if (len < 1) return mid;
+    final px = -dy / len;
+    final py = dx / len;
+    final h = (len * 0.32).clamp(50.0, 220.0);
+    return Offset(mid.dx + px * h, mid.dy + py * h);
+  }
+
+  Offset _bezier(double t) {
+    final cp = _controlPoint;
+    final mt = 1.0 - t;
+    return Offset(
+      mt * mt * attackerPos.dx + 2 * mt * t * cp.dx + t * t * targetPos.dx,
+      mt * mt * attackerPos.dy + 2 * mt * t * cp.dy + t * t * targetPos.dy,
+    );
+  }
+
+  double _angle(double t) {
+    final cp = _controlPoint;
+    final mt = 1.0 - t;
+    final tx = 2 * mt * (cp.dx - attackerPos.dx) + 2 * t * (targetPos.dx - cp.dx);
+    final ty = 2 * mt * (cp.dy - attackerPos.dy) + 2 * t * (targetPos.dy - cp.dy);
+    return atan2(ty, tx);
+  }
+
+  void _drawEmoji(Canvas canvas, String emoji, double t, double size) {
+    final ct = t.clamp(0.0, 1.0);
+    if (ct <= 0) return;
+    final pos = _bezier(ct);
+    final angle = _angle(ct);
+    final tp = TextPainter(
+      text: TextSpan(text: emoji, style: TextStyle(fontSize: size)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.rotate(angle - pi / 2);
+    tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+    canvas.restore();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+
+    // ── Glow trail ─────────────────────────────────────────────────────────
+    final glowPaint = Paint()
+      ..color = Colors.red.withValues(alpha: 0.20)
+      ..strokeWidth = 10.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // ── Main arc line ──────────────────────────────────────────────────────
+    final linePaint = Paint()
+      ..color = Colors.redAccent.withValues(alpha: 0.95)
+      ..strokeWidth = 2.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const steps = 80;
+    final maxStep = (steps * progress).round().clamp(1, steps);
+    final path = Path()..moveTo(attackerPos.dx, attackerPos.dy);
+    for (int i = 1; i <= maxStep; i++) {
+      final pt = _bezier(i / steps);
+      path.lineTo(pt.dx, pt.dy);
+    }
+    canvas.drawPath(path, glowPaint);
+    canvas.drawPath(path, linePaint);
+
+    // ── Arrowhead at tip ───────────────────────────────────────────────────
+    if (progress > 0.02) {
+      final tip = _bezier(progress.clamp(0, 1));
+      final ang = _angle(progress.clamp(0, 1));
+      canvas.save();
+      canvas.translate(tip.dx, tip.dy);
+      canvas.rotate(ang);
+      const s = 9.0;
+      final arrow = Path()
+        ..moveTo(0, -s)
+        ..lineTo(s * 0.55, s * 0.4)
+        ..lineTo(-s * 0.55, s * 0.4)
+        ..close();
+      canvas.drawPath(arrow, Paint()..color = Colors.redAccent);
+      canvas.restore();
+    }
+
+    // ── Moving units (staggered) ───────────────────────────────────────────
+    _drawEmoji(canvas, '🪖', progress,          18); // lead tank
+    _drawEmoji(canvas, '🪖', progress - 0.16,   16); // second tank
+    _drawEmoji(canvas, '✈️', progress - 0.32,   15); // air support
+
+    // ── Origin dot ────────────────────────────────────────────────────────
+    canvas.drawCircle(attackerPos, 5,
+        Paint()..color = Colors.red.withValues(alpha: 0.9));
+    canvas.drawCircle(
+        attackerPos, 5,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.7)
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke);
+
+    // ── Impact explosion rings ─────────────────────────────────────────────
+    if (impactProgress > 0) {
+      final rings = [
+        (Colors.red,    0.0,  50.0, 2.5),
+        (Colors.orange, 0.22, 35.0, 2.0),
+        (Colors.yellow, 0.44, 22.0, 1.5),
+      ];
+      for (final (color, delay, maxR, stroke) in rings) {
+        final t = ((impactProgress - delay) / (1.0 - delay)).clamp(0.0, 1.0);
+        if (t <= 0) continue;
+        canvas.drawCircle(
+          targetPos,
+          t * maxR,
+          Paint()
+            ..color = color.withValues(alpha: (1.0 - t) * 0.9)
+            ..strokeWidth = stroke
+            ..style = PaintingStyle.stroke,
+        );
+      }
+      // Centre flash dot
+      if (impactProgress < 0.5) {
+        canvas.drawCircle(
+          targetPos,
+          8 * (1 - impactProgress * 2),
+          Paint()..color = Colors.white.withValues(alpha: 1 - impactProgress * 2),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_InvasionArcPainter old) =>
+      old.progress != progress || old.impactProgress != impactProgress;
 }
