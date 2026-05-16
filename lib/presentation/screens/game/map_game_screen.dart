@@ -1667,13 +1667,16 @@ class _TreasurySheet extends StatelessWidget {
       return '$sign\$${abs.toStringAsFixed(0)}B';
     }
 
-    return Container(
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+      child: Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1799,6 +1802,8 @@ class _TreasurySheet extends StatelessWidget {
             ),
           ),
         ],
+        ),
+      ),
       ),
     );
   }
