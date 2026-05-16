@@ -4,8 +4,7 @@ import 'policy_model.dart';
 class GameStateModel {
   final CountryModel country;
   final int currentYear;
-  final int termStartYear;
-  final int termDurationYears;
+  final int startYear;
 
   // Core Stats (0–100)
   final double approvalRating;
@@ -68,8 +67,7 @@ class GameStateModel {
   const GameStateModel({
     required this.country,
     required this.currentYear,
-    required this.termStartYear,
-    this.termDurationYears = 5,
+    required this.startYear,
     required this.approvalRating,
     required this.happiness,
     required this.corruption,
@@ -120,9 +118,7 @@ class GameStateModel {
 
   bool get treasuryIsNegative => treasury < 0;
 
-  int get yearsInOffice => currentYear - termStartYear;
-  int get yearsRemaining => termDurationYears - yearsInOffice;
-  bool get isTermOver => yearsInOffice >= termDurationYears;
+  int get yearsInOffice => currentYear - startYear;
   double get gdpPerCapita {
     final pop = populationMillions > 0 ? populationMillions * 1e6 : country.population.toDouble();
     return gdpBillion * 1e9 / pop;
@@ -145,8 +141,7 @@ class GameStateModel {
   GameStateModel copyWith({
     CountryModel? country,
     int? currentYear,
-    int? termStartYear,
-    int? termDurationYears,
+    int? startYear,
     double? approvalRating,
     double? happiness,
     double? corruption,
@@ -185,8 +180,7 @@ class GameStateModel {
     return GameStateModel(
       country: country ?? this.country,
       currentYear: currentYear ?? this.currentYear,
-      termStartYear: termStartYear ?? this.termStartYear,
-      termDurationYears: termDurationYears ?? this.termDurationYears,
+      startYear: startYear ?? this.startYear,
       approvalRating: approvalRating ?? this.approvalRating,
       happiness: happiness ?? this.happiness,
       corruption: corruption ?? this.corruption,

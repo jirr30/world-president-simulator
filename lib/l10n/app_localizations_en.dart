@@ -140,8 +140,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approval => 'Approval';
 
   @override
-  String leaderInfo(String title, int year, int yearsIn, int termDuration) {
-    return '$title • Year $year • Term $yearsIn/$termDuration';
+  String leaderInfo(String title, int year, int yearsIn) {
+    return '$title • Year $year • $yearsIn yrs in power';
   }
 
   @override
@@ -190,11 +190,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get population => 'Population';
-
-  @override
-  String yearsLeft(int n) {
-    return '${n}yr left';
-  }
 
   @override
   String get economicIndicators => 'Economic Indicators';
@@ -392,6 +387,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get termEndedBadge => 'TERM ENDED';
+
+  @override
+  String get invadedBadge => 'INVADED';
+
+  @override
+  String get countryFallen => 'Country Has Fallen';
+
+  @override
+  String invadedVerdictText(String country) {
+    return '$country has been conquered by a foreign power. Your failure to defend the nation will be remembered throughout history.';
+  }
 
   @override
   String get removedFromPower => 'Removed from Power';
@@ -606,14 +612,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueBtn => 'Continue';
-
-  @override
-  String get termEndingSoon => 'Term ending soon';
-
-  @override
-  String yearsRemaining(int n) {
-    return '$n year remaining';
-  }
 
   @override
   String get politicalCapital => 'Political Capital';
@@ -1248,12 +1246,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stableLabel => 'Stable';
 
   @override
-  String get termLabel => 'Term';
-
-  @override
-  String get lastYear => 'Last Year';
-
-  @override
   String get statusLabel => 'Status';
 
   @override
@@ -1339,8 +1331,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String termYearOf(int year, int total) {
-    return 'Term year $year of $total';
+  String yearsInOfficeLabel(int year) {
+    return 'Year $year in office';
   }
 
   @override

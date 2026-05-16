@@ -13,8 +13,7 @@ class SimulationEngine {
     return GameStateModel(
       country: country,
       currentYear: 2024,
-      termStartYear: 2024,
-      termDurationYears: 5,
+      startYear: 2024,
       approvalRating: startApproval,
       happiness: 40.0 + (country.humanDevelopmentIndex * 30),
       corruption: 100.0 - country.corruptionIndex.toDouble(),
@@ -396,9 +395,9 @@ class SimulationEngine {
     if (state.atWar && state.militaryStrength < 25.0) {
       return EventsData.peaceOfferEvent();
     }
-    // Priority 3: Election season in the penultimate year of term
-    if (state.yearsRemaining == 1) {
-      return EventsData.electionSeasonEvent(state.approvalRating);
+    // Priority 3: Foreign invasion when military is weak and country is unstable
+    if (!state.atWar && state.militaryStrength < 30.0 && state.stability < 40.0) {
+      return EventsData.invasionEvent();
     }
     return null;
   }

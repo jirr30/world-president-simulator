@@ -140,8 +140,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get approval => 'Persetujuan';
 
   @override
-  String leaderInfo(String title, int year, int yearsIn, int termDuration) {
-    return '$title • Tahun $year • Masa $yearsIn/$termDuration';
+  String leaderInfo(String title, int year, int yearsIn) {
+    return '$title • Tahun $year • $yearsIn thn berkuasa';
   }
 
   @override
@@ -190,11 +190,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get population => 'Populasi';
-
-  @override
-  String yearsLeft(int n) {
-    return '${n}th tersisa';
-  }
 
   @override
   String get economicIndicators => 'Indikator Ekonomi';
@@ -392,6 +387,17 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get termEndedBadge => 'MASA JABATAN BERAKHIR';
+
+  @override
+  String get invadedBadge => 'DIINVASI';
+
+  @override
+  String get countryFallen => 'Negara Telah Jatuh';
+
+  @override
+  String invadedVerdictText(String country) {
+    return '$country telah ditaklukkan oleh kekuatan asing. Kegagalan Anda mempertahankan negara akan dikenang sepanjang sejarah.';
+  }
 
   @override
   String get removedFromPower => 'Dicopot dari Kekuasaan';
@@ -606,14 +612,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get continueBtn => 'Lanjutkan';
-
-  @override
-  String get termEndingSoon => 'Masa jabatan segera berakhir';
-
-  @override
-  String yearsRemaining(int n) {
-    return '$n tahun tersisa';
-  }
 
   @override
   String get politicalCapital => 'Modal Politik';
@@ -1250,12 +1248,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get stableLabel => 'Stabil';
 
   @override
-  String get termLabel => 'Masa';
-
-  @override
-  String get lastYear => 'Tahun Terakhir';
-
-  @override
   String get statusLabel => 'Status';
 
   @override
@@ -1341,8 +1333,8 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String termYearOf(int year, int total) {
-    return 'Tahun jabatan $year dari $total';
+  String yearsInOfficeLabel(int year) {
+    return 'Tahun $year menjabat';
   }
 
   @override

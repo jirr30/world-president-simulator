@@ -341,8 +341,8 @@ abstract class AppLocalizations {
   /// No description provided for @leaderInfo.
   ///
   /// In en, this message translates to:
-  /// **'{title} • Year {year} • Term {yearsIn}/{termDuration}'**
-  String leaderInfo(String title, int year, int yearsIn, int termDuration);
+  /// **'{title} • Year {year} • {yearsIn} yrs in power'**
+  String leaderInfo(String title, int year, int yearsIn);
 
   /// No description provided for @statHappiness.
   ///
@@ -433,12 +433,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Population'**
   String get population;
-
-  /// No description provided for @yearsLeft.
-  ///
-  /// In en, this message translates to:
-  /// **'{n}yr left'**
-  String yearsLeft(int n);
 
   /// No description provided for @economicIndicators.
   ///
@@ -830,6 +824,24 @@ abstract class AppLocalizations {
   /// **'TERM ENDED'**
   String get termEndedBadge;
 
+  /// No description provided for @invadedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'INVADED'**
+  String get invadedBadge;
+
+  /// No description provided for @countryFallen.
+  ///
+  /// In en, this message translates to:
+  /// **'Country Has Fallen'**
+  String get countryFallen;
+
+  /// No description provided for @invadedVerdictText.
+  ///
+  /// In en, this message translates to:
+  /// **'{country} has been conquered by a foreign power. Your failure to defend the nation will be remembered throughout history.'**
+  String invadedVerdictText(String country);
+
   /// No description provided for @removedFromPower.
   ///
   /// In en, this message translates to:
@@ -1213,18 +1225,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get continueBtn;
-
-  /// No description provided for @termEndingSoon.
-  ///
-  /// In en, this message translates to:
-  /// **'Term ending soon'**
-  String get termEndingSoon;
-
-  /// No description provided for @yearsRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'{n} year remaining'**
-  String yearsRemaining(int n);
 
   /// No description provided for @politicalCapital.
   ///
@@ -2300,18 +2300,6 @@ abstract class AppLocalizations {
   /// **'Stable'**
   String get stableLabel;
 
-  /// No description provided for @termLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Term'**
-  String get termLabel;
-
-  /// No description provided for @lastYear.
-  ///
-  /// In en, this message translates to:
-  /// **'Last Year'**
-  String get lastYear;
-
   /// No description provided for @statusLabel.
   ///
   /// In en, this message translates to:
@@ -2468,11 +2456,11 @@ abstract class AppLocalizations {
   /// **'Advance to Year {year}'**
   String advanceToYearTitle(int year);
 
-  /// No description provided for @termYearOf.
+  /// No description provided for @yearsInOfficeLabel.
   ///
   /// In en, this message translates to:
-  /// **'Term year {year} of {total}'**
-  String termYearOf(int year, int total);
+  /// **'Year {year} in office'**
+  String yearsInOfficeLabel(int year);
 
   /// No description provided for @budgetProjection.
   ///

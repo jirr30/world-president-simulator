@@ -37,8 +37,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   void _onAdvanceYear() {
     final state = ref.read(gameProvider.notifier).advanceYear();
-    if (state.isTermOver) {
-      context.go('/gameover');
+    if (state.atWar && state.militaryStrength <= 5.0) {
+      context.go('/gameover', extra: 'invaded');
       return;
     }
     // Random event chance: 70% per year
@@ -215,7 +215,7 @@ class _DashboardHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  context.l10n.leaderInfo(game.leaderTitle as String, game.currentYear as int, game.yearsInOffice as int, game.termDurationYears as int),
+                  context.l10n.leaderInfo(game.leaderTitle, game.currentYear, game.yearsInOffice),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,

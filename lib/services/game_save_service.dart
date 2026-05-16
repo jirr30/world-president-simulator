@@ -15,8 +15,7 @@ class GameSaveService {
     final map = {
       'countryId': state.country.id,
       'currentYear': state.currentYear,
-      'termStartYear': state.termStartYear,
-      'termDurationYears': state.termDurationYears,
+      'startYear': state.startYear,
       'approvalRating': state.approvalRating,
       'happiness': state.happiness,
       'corruption': state.corruption,
@@ -74,8 +73,7 @@ class GameSaveService {
       return GameStateModel(
         country: country,
         currentYear: map['currentYear'] as int,
-        termStartYear: map['termStartYear'] as int,
-        termDurationYears: map['termDurationYears'] as int? ?? 5,
+        startYear: map['startYear'] as int? ?? map['termStartYear'] as int? ?? 2024,
         approvalRating: (map['approvalRating'] as num).toDouble(),
         happiness: (map['happiness'] as num).toDouble(),
         corruption: (map['corruption'] as num).toDouble(),

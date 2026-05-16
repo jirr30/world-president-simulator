@@ -458,44 +458,48 @@ class EventsData {
     ],
   );
 
-  // Forced event: yearsRemaining == 1 (last year of term)
-  static EventModel electionSeasonEvent(double approval) => EventModel(
-    id: 'election_season',
-    emoji: '🗳️',
-    title: 'Election Season Begins',
-    description: approval >= 55
-        ? 'Your term ends next year and the polls are in your favor. '
-          'Use this final year to cement your legacy.'
-        : 'Your term ends next year and the opposition is gaining momentum. '
-          'Your decisions this year will define how history remembers you.',
-    severity: approval >= 55 ? EventSeverity.low : EventSeverity.medium,
+  // Forced event: military < 30 AND stability < 40 AND not at war (foreign invasion)
+  static EventModel invasionEvent() => EventModel(
+    id: 'foreign_invasion',
+    emoji: '⚔️',
+    title: 'Foreign Invasion',
+    description:
+        'A neighboring country has launched a full-scale military assault on your borders. '
+        'Your weakened armed forces are struggling to mount an effective defense. '
+        'The nation is in crisis — every decision counts.',
+    severity: EventSeverity.critical,
     choices: [
       EventChoice(
-        label: 'Populist Campaign',
-        description: 'Promise tax cuts and expanded social programs to win votes.',
+        label: 'Full Military Resistance',
+        description: 'Order all available forces to repel the invasion at any cost.',
         effects: [
-          StatEffect('Happiness', 7.0),
-          StatEffect('Approval', 9.0),
-          StatEffect('National Debt', -4.0),
+          StatEffect('At War', 1.0),
+          StatEffect('Military Strength', -10.0),
+          StatEffect('Happiness', -8.0),
+          StatEffect('Approval', 6.0),
+          StatEffect('Stability', -5.0),
         ],
       ),
       EventChoice(
-        label: 'Highlight Achievements',
-        description: 'Run on your record and long-term economic vision.',
+        label: 'Emergency Mobilization',
+        description: 'Declare a national emergency and conscript additional troops.',
         effects: [
-          StatEffect('Approval', 5.0),
-          StatEffect('Diplomatic Rep', 3.0),
-          StatEffect('Stability', 3.0),
+          StatEffect('At War', 1.0),
+          StatEffect('Military Strength', -5.0),
+          StatEffect('Troops', 500.0),
+          StatEffect('Happiness', -10.0),
+          StatEffect('GDP Growth', -1.5),
         ],
       ),
       EventChoice(
-        label: 'Economic Push',
-        description: 'Launch a final wave of economic reforms to boost growth.',
+        label: 'Seek Allied Support',
+        description: 'Appeal to allies and international community for immediate military aid.',
         effects: [
-          StatEffect('GDP Growth', 2.5),
-          StatEffect('Approval', 3.0),
-          StatEffect('Employment', 2.0),
-          StatEffect('Happiness', 2.0),
+          StatEffect('At War', 1.0),
+          StatEffect('Military Strength', -8.0),
+          StatEffect('Diplomatic Rep', -5.0),
+          StatEffect('Happiness', -5.0),
+          StatEffect('Stability', -3.0),
         ],
       ),
     ],

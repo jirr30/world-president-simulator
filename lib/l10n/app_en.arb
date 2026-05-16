@@ -123,13 +123,12 @@
   "approval": "Approval",
   "@approval": {},
 
-  "leaderInfo": "{title} • Year {year} • Term {yearsIn}/{termDuration}",
+  "leaderInfo": "{title} • Year {year} • {yearsIn} yrs in power",
   "@leaderInfo": {
     "placeholders": {
       "title": { "type": "String" },
       "year": { "type": "int" },
-      "yearsIn": { "type": "int" },
-      "termDuration": { "type": "int" }
+      "yearsIn": { "type": "int" }
     }
   },
 
@@ -179,11 +178,6 @@
 
   "population": "Population",
   "@population": {},
-
-  "yearsLeft": "{n}yr left",
-  "@yearsLeft": {
-    "placeholders": { "n": { "type": "int" } }
-  },
 
   "economicIndicators": "Economic Indicators",
   "@economicIndicators": {},
@@ -379,6 +373,17 @@
 
   "termEndedBadge": "TERM ENDED",
   "@termEndedBadge": {},
+
+  "invadedBadge": "INVADED",
+  "@invadedBadge": {},
+
+  "countryFallen": "Country Has Fallen",
+  "@countryFallen": {},
+
+  "invadedVerdictText": "{country} has been conquered by a foreign power. Your failure to defend the nation will be remembered throughout history.",
+  "@invadedVerdictText": {
+    "placeholders": { "country": { "type": "String" } }
+  },
 
   "removedFromPower": "Removed from Power",
   "@removedFromPower": {},
@@ -593,14 +598,6 @@
 
   "continueBtn": "Continue",
   "@continueBtn": {},
-
-  "termEndingSoon": "Term ending soon",
-  "@termEndingSoon": {},
-
-  "yearsRemaining": "{n} year remaining",
-  "@yearsRemaining": {
-    "placeholders": { "n": { "type": "int" } }
-  },
 
   "politicalCapital": "Political Capital",
   "@politicalCapital": {},
@@ -1253,12 +1250,6 @@
   "stableLabel": "Stable",
   "@stableLabel": {},
 
-  "termLabel": "Term",
-  "@termLabel": {},
-
-  "lastYear": "Last Year",
-  "@lastYear": {},
-
   "statusLabel": "Status",
   "@statusLabel": {},
 
@@ -1341,12 +1332,9 @@
     "placeholders": { "year": { "type": "int" } }
   },
 
-  "termYearOf": "Term year {year} of {total}",
-  "@termYearOf": {
-    "placeholders": {
-      "year": { "type": "int" },
-      "total": { "type": "int" }
-    }
+  "yearsInOfficeLabel": "Year {year} in office",
+  "@yearsInOfficeLabel": {
+    "placeholders": { "year": { "type": "int" } }
   },
 
   "budgetProjection": "BUDGET PROJECTION",

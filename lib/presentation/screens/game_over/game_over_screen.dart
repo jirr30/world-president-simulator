@@ -50,13 +50,14 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
 
     final reason = widget.reason;
     final isImpeached = reason == 'impeached';
+    final isInvaded = reason == 'invaded';
     final legacy = SimulationEngine.getLegacyRating(game);
     final avgApproval = game.approvalHistory.isNotEmpty
         ? game.approvalHistory.reduce((a, b) => a + b) /
             game.approvalHistory.length
         : game.approvalRating;
-    final approvalColor = isImpeached ? AppColors.danger : AppColors.approvalColor(avgApproval);
-    final emoji = isImpeached ? '🔥' : _legacyEmoji(avgApproval);
+    final approvalColor = (isImpeached || isInvaded) ? AppColors.danger : AppColors.approvalColor(avgApproval);
+    final emoji = isImpeached ? '🔥' : isInvaded ? '💀' : _legacyEmoji(avgApproval);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -86,9 +87,9 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       Text(emoji, style: const TextStyle(fontSize: 56)),
                       const SizedBox(height: 12),
                       Text(
-                        isImpeached ? context.l10n.impeachedBadge : context.l10n.termEndedBadge,
+                        isImpeached ? context.l10n.impeachedBadge : isInvaded ? context.l10n.invadedBadge : context.l10n.termEndedBadge,
                         style: TextStyle(
-                          color: isImpeached ? AppColors.danger : AppColors.textMuted,
+                          color: (isImpeached || isInvaded) ? AppColors.danger : AppColors.textMuted,
                           fontSize: 10,
                           letterSpacing: 2.5,
                           fontFamily: 'Poppins',
@@ -97,7 +98,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isImpeached ? context.l10n.removedFromPower : legacy,
+                        isImpeached ? context.l10n.removedFromPower : isInvaded ? context.l10n.countryFallen : legacy,
                         style: TextStyle(
                           color: approvalColor,
                           fontSize: 18,
@@ -130,7 +131,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${game.termStartYear} – ${game.currentYear}',
+                        '${game.startYear} – ${game.currentYear}',
                         style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
@@ -289,7 +290,9 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                           Text(
                             isImpeached
                                 ? _impeachmentText(context, game.approvalRating, game.country.name)
-                                : _verdictText(context, avgApproval, game.country.name),
+                                : isInvaded
+                                    ? context.l10n.invadedVerdictText(game.country.name)
+                                    : _verdictText(context, avgApproval, game.country.name),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,

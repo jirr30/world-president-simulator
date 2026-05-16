@@ -144,8 +144,8 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       context.go('/gameover', extra: 'impeached');
       return;
     }
-    if (newState.isTermOver) {
-      context.go('/gameover');
+    if (newState.atWar && newState.militaryStrength <= 5.0) {
+      context.go('/gameover', extra: 'invaded');
       return;
     }
 
@@ -198,7 +198,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
     // Show tutorial on first play
     if (!_tutorialChecked) {
       _tutorialChecked = true;
-      if (game.yearsInOffice == 0) {
+      if (game.currentYear == game.startYear) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _showTutorial = true);
         });
@@ -521,7 +521,7 @@ class _TopHud extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  context.l10n.leaderInfo(game.leaderTitle, game.currentYear, game.yearsInOffice, game.termDurationYears),
+                  context.l10n.leaderInfo(game.leaderTitle, game.currentYear, game.yearsInOffice),
                   style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -712,15 +712,6 @@ class _BottomHudState extends State<_BottomHud>
               value: '${game.stability.toStringAsFixed(0)}%'),
           const SizedBox(width: 6),
           _CapitalChip(capital: game.politicalCapital),
-          if (game.yearsRemaining <= 2) ...[
-            const SizedBox(width: 6),
-            _HudChip(
-              icon: game.yearsRemaining == 1 ? Icons.hourglass_empty_rounded : Icons.hourglass_bottom_rounded,
-              color: game.yearsRemaining == 1 ? AppColors.danger : AppColors.warning,
-              label: l10n.termLabel,
-              value: game.yearsRemaining == 1 ? l10n.lastYear : l10n.yearsLeft(game.yearsRemaining),
-            ),
-          ],
           if (game.atWar) ...[
             const SizedBox(width: 6),
             _HudChip(
@@ -2015,7 +2006,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(l10n.advanceToYearTitle(game.currentYear + 1),
                   style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
-              Text(l10n.termYearOf(game.yearsInOffice + 1, game.termDurationYears),
+              Text(l10n.yearsInOfficeLabel(game.yearsInOffice + 1),
                   style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
             ]),
           ]),
