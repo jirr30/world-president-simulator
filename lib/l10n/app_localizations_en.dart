@@ -1275,6 +1275,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get diplomacyHeader => 'DIPLOMACY';
 
   @override
+  String get diplomacyTab => 'Diplomacy';
+
+  @override
+  String get militaryTab => 'Military';
+
+  @override
+  String get militaryIntel => 'MILITARY INTEL';
+
+  @override
+  String get estMilPower => 'Est. Mil. Power';
+
+  @override
+  String get estTroops => 'Est. Troops';
+
+  @override
+  String get threatLevel => 'Threat Level';
+
+  @override
+  String get threatLow => 'Low';
+
+  @override
+  String get threatMedium => 'Medium';
+
+  @override
+  String get threatHigh => 'HIGH';
+
+  @override
+  String get warStatusLabel => 'War Status';
+
+  @override
+  String get notAtWarLabel => 'Peace';
+
+  @override
+  String get alreadyAtWar => 'Already at war';
+
+  @override
+  String get cannotAttackAlly => 'Cannot attack ally';
+
+  @override
+  String warDeclaredMsg(String country) {
+    return '⚔️ War declared against $country!';
+  }
+
+  @override
+  String peaceSuedMsg(String country) {
+    return '🕊️ Peace with $country!';
+  }
+
+  @override
+  String get peacefulNation => 'Peaceful';
+
+  @override
   String get dashboardLabel => 'Dashboard';
 
   @override

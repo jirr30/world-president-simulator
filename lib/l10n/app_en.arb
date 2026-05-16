@@ -1277,6 +1277,58 @@
   "diplomacyHeader": "DIPLOMACY",
   "@diplomacyHeader": {},
 
+  "diplomacyTab": "Diplomacy",
+  "@diplomacyTab": {},
+
+  "militaryTab": "Military",
+  "@militaryTab": {},
+
+  "militaryIntel": "MILITARY INTEL",
+  "@militaryIntel": {},
+
+  "estMilPower": "Est. Mil. Power",
+  "@estMilPower": {},
+
+  "estTroops": "Est. Troops",
+  "@estTroops": {},
+
+  "threatLevel": "Threat Level",
+  "@threatLevel": {},
+
+  "threatLow": "Low",
+  "@threatLow": {},
+
+  "threatMedium": "Medium",
+  "@threatMedium": {},
+
+  "threatHigh": "HIGH",
+  "@threatHigh": {},
+
+  "warStatusLabel": "War Status",
+  "@warStatusLabel": {},
+
+  "notAtWarLabel": "Peace",
+  "@notAtWarLabel": {},
+
+  "alreadyAtWar": "Already at war",
+  "@alreadyAtWar": {},
+
+  "cannotAttackAlly": "Cannot attack ally",
+  "@cannotAttackAlly": {},
+
+  "warDeclaredMsg": "⚔️ War declared against {country}!",
+  "@warDeclaredMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "peaceSuedMsg": "🕊️ Peace with {country}!",
+  "@peaceSuedMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "peacefulNation": "Peaceful",
+  "@peacefulNation": {},
+
   "dashboardLabel": "Dashboard",
   "@dashboardLabel": {},
 

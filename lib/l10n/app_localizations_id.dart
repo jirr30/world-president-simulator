@@ -1277,6 +1277,58 @@ class AppLocalizationsId extends AppLocalizations {
   String get diplomacyHeader => 'DIPLOMASI';
 
   @override
+  String get diplomacyTab => 'Diplomasi';
+
+  @override
+  String get militaryTab => 'Militer';
+
+  @override
+  String get militaryIntel => 'INTELIJEN MILITER';
+
+  @override
+  String get estMilPower => 'Est. Kekuatan Mil.';
+
+  @override
+  String get estTroops => 'Est. Pasukan';
+
+  @override
+  String get threatLevel => 'Tingkat Ancaman';
+
+  @override
+  String get threatLow => 'Rendah';
+
+  @override
+  String get threatMedium => 'Sedang';
+
+  @override
+  String get threatHigh => 'TINGGI';
+
+  @override
+  String get warStatusLabel => 'Status Perang';
+
+  @override
+  String get notAtWarLabel => 'Damai';
+
+  @override
+  String get alreadyAtWar => 'Sudah berperang';
+
+  @override
+  String get cannotAttackAlly => 'Tidak bisa serang sekutu';
+
+  @override
+  String warDeclaredMsg(String country) {
+    return '⚔️ Perang dideklarasikan terhadap $country!';
+  }
+
+  @override
+  String peaceSuedMsg(String country) {
+    return '🕊️ Damai dengan $country!';
+  }
+
+  @override
+  String get peacefulNation => 'Damai';
+
+  @override
   String get dashboardLabel => 'Dasbor';
 
   @override

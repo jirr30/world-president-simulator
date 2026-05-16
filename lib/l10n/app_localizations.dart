@@ -2354,6 +2354,102 @@ abstract class AppLocalizations {
   /// **'DIPLOMACY'**
   String get diplomacyHeader;
 
+  /// No description provided for @diplomacyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Diplomacy'**
+  String get diplomacyTab;
+
+  /// No description provided for @militaryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Military'**
+  String get militaryTab;
+
+  /// No description provided for @militaryIntel.
+  ///
+  /// In en, this message translates to:
+  /// **'MILITARY INTEL'**
+  String get militaryIntel;
+
+  /// No description provided for @estMilPower.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. Mil. Power'**
+  String get estMilPower;
+
+  /// No description provided for @estTroops.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. Troops'**
+  String get estTroops;
+
+  /// No description provided for @threatLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Threat Level'**
+  String get threatLevel;
+
+  /// No description provided for @threatLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get threatLow;
+
+  /// No description provided for @threatMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get threatMedium;
+
+  /// No description provided for @threatHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'HIGH'**
+  String get threatHigh;
+
+  /// No description provided for @warStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'War Status'**
+  String get warStatusLabel;
+
+  /// No description provided for @notAtWarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Peace'**
+  String get notAtWarLabel;
+
+  /// No description provided for @alreadyAtWar.
+  ///
+  /// In en, this message translates to:
+  /// **'Already at war'**
+  String get alreadyAtWar;
+
+  /// No description provided for @cannotAttackAlly.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot attack ally'**
+  String get cannotAttackAlly;
+
+  /// No description provided for @warDeclaredMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'⚔️ War declared against {country}!'**
+  String warDeclaredMsg(String country);
+
+  /// No description provided for @peaceSuedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'🕊️ Peace with {country}!'**
+  String peaceSuedMsg(String country);
+
+  /// No description provided for @peacefulNation.
+  ///
+  /// In en, this message translates to:
+  /// **'Peaceful'**
+  String get peacefulNation;
+
   /// No description provided for @dashboardLabel.
   ///
   /// In en, this message translates to:

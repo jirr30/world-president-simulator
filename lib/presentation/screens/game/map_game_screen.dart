@@ -1074,7 +1074,22 @@ class _CountryDialog extends ConsumerStatefulWidget {
   ConsumerState<_CountryDialog> createState() => _CountryDialogState();
 }
 
-class _CountryDialogState extends ConsumerState<_CountryDialog> {
+class _CountryDialogState extends ConsumerState<_CountryDialog>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -1216,85 +1231,128 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
               ),
             ),
 
-            // ── Diplomacy actions ──────────────────────────
+            // ── Tabs (non-player: Diplomacy + Military) ────────
             if (!widget.isPlayer) ...[
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.diplomacyHeader, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
+                ),
+                child: TabBar(
+                  controller: _tabs,
+                  indicatorColor: AppColors.accent,
+                  indicatorWeight: 2,
+                  labelColor: AppColors.accent,
+                  unselectedLabelColor: AppColors.textMuted,
+                  labelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700),
+                  unselectedLabelStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 11),
+                  tabs: [
+                    Tab(icon: const Icon(Icons.handshake_rounded, size: 16), text: l10n.diplomacyTab),
+                    Tab(icon: const Icon(Icons.military_tech_rounded, size: 16), text: l10n.militaryTab),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 260,
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    // ── Tab 1: Diplomacy ───────────────────────────
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (playerAlly)
-                            _DialogActionBtn(
-                              icon: Icons.handshake_rounded,
-                              label: l10n.breakAlliance,
-                              sub: '💎${SimulationEngine.breakCost}',
-                              color: AppColors.warning,
-                              canAfford: capital >= SimulationEngine.breakCost,
-                              onTap: () => doAction(
-                                () => ref.read(gameProvider.notifier).breakAlliance(country.name),
-                                l10n.allianceEndedMsg(country.name),
-                                AppColors.warning,
-                              ),
-                              onNoCapital: () => notEnoughCapital(SimulationEngine.breakCost),
-                            )
-                          else if (nativeAlly)
-                            _DialogActionBtn(icon: Icons.handshake_rounded, label: l10n.historicAlly, sub: l10n.cannotBreakLabel, color: const Color(0xFF4CAF50), canAfford: false, onTap: () {}, onNoCapital: () {})
-                          else if (!isRival)
-                            _DialogActionBtn(
-                              icon: Icons.handshake_rounded,
-                              label: l10n.formAlliance,
-                              sub: game.diplomaticReputation < 30 ? l10n.needRepLabel : '💎${SimulationEngine.allianceCost}',
-                              color: const Color(0xFF4CAF50),
-                              canAfford: capital >= SimulationEngine.allianceCost,
-                              requireRep: game.diplomaticReputation < 30,
-                              onTap: () => doAction(
-                                () => ref.read(gameProvider.notifier).proposeAlliance(country.name),
-                                l10n.allianceFormedMsg(country.name),
-                                const Color(0xFF4CAF50),
-                              ),
-                              onNoCapital: () => notEnoughCapital(SimulationEngine.allianceCost),
-                            ),
-                          if (playerSanction)
-                            _DialogActionBtn(
-                              icon: Icons.gavel_rounded,
-                              label: l10n.liftSanction,
-                              sub: '💎${SimulationEngine.liftCost}',
-                              color: AppColors.diplomacy,
-                              canAfford: capital >= SimulationEngine.liftCost,
-                              onTap: () => doAction(
-                                () => ref.read(gameProvider.notifier).liftSanction(country.name),
-                                l10n.sanctionsLiftedMsg(country.name),
-                                AppColors.diplomacy,
-                              ),
-                              onNoCapital: () => notEnoughCapital(SimulationEngine.liftCost),
-                            )
-                          else if (nativeRival)
-                            _DialogActionBtn(icon: Icons.gavel_rounded, label: l10n.historicRival, sub: l10n.fixedRelLabel, color: AppColors.danger, canAfford: false, onTap: () {}, onNoCapital: () {})
-                          else if (!isAlly)
-                            _DialogActionBtn(
-                              icon: Icons.gavel_rounded,
-                              label: l10n.imposeSanction,
-                              sub: '💎${SimulationEngine.sanctionCost}',
-                              color: AppColors.danger,
-                              canAfford: capital >= SimulationEngine.sanctionCost,
-                              onTap: () => doAction(
-                                () => ref.read(gameProvider.notifier).imposeSanction(country.name),
-                                l10n.sanctionsImposedMsg(country.name),
-                                AppColors.danger,
-                              ),
-                              onNoCapital: () => notEnoughCapital(SimulationEngine.sanctionCost),
-                            ),
+                          Text(l10n.diplomacyHeader, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (playerAlly)
+                                _DialogActionBtn(
+                                  icon: Icons.handshake_rounded,
+                                  label: l10n.breakAlliance,
+                                  sub: '💎${SimulationEngine.breakCost}',
+                                  color: AppColors.warning,
+                                  canAfford: capital >= SimulationEngine.breakCost,
+                                  onTap: () => doAction(
+                                    () => ref.read(gameProvider.notifier).breakAlliance(country.name),
+                                    l10n.allianceEndedMsg(country.name),
+                                    AppColors.warning,
+                                  ),
+                                  onNoCapital: () => notEnoughCapital(SimulationEngine.breakCost),
+                                )
+                              else if (nativeAlly)
+                                _DialogActionBtn(icon: Icons.handshake_rounded, label: l10n.historicAlly, sub: l10n.cannotBreakLabel, color: const Color(0xFF4CAF50), canAfford: false, onTap: () {}, onNoCapital: () {})
+                              else if (!isRival)
+                                _DialogActionBtn(
+                                  icon: Icons.handshake_rounded,
+                                  label: l10n.formAlliance,
+                                  sub: game.diplomaticReputation < 30 ? l10n.needRepLabel : '💎${SimulationEngine.allianceCost}',
+                                  color: const Color(0xFF4CAF50),
+                                  canAfford: capital >= SimulationEngine.allianceCost,
+                                  requireRep: game.diplomaticReputation < 30,
+                                  onTap: () => doAction(
+                                    () => ref.read(gameProvider.notifier).proposeAlliance(country.name),
+                                    l10n.allianceFormedMsg(country.name),
+                                    const Color(0xFF4CAF50),
+                                  ),
+                                  onNoCapital: () => notEnoughCapital(SimulationEngine.allianceCost),
+                                ),
+                              if (playerSanction)
+                                _DialogActionBtn(
+                                  icon: Icons.gavel_rounded,
+                                  label: l10n.liftSanction,
+                                  sub: '💎${SimulationEngine.liftCost}',
+                                  color: AppColors.diplomacy,
+                                  canAfford: capital >= SimulationEngine.liftCost,
+                                  onTap: () => doAction(
+                                    () => ref.read(gameProvider.notifier).liftSanction(country.name),
+                                    l10n.sanctionsLiftedMsg(country.name),
+                                    AppColors.diplomacy,
+                                  ),
+                                  onNoCapital: () => notEnoughCapital(SimulationEngine.liftCost),
+                                )
+                              else if (nativeRival)
+                                _DialogActionBtn(icon: Icons.gavel_rounded, label: l10n.historicRival, sub: l10n.fixedRelLabel, color: AppColors.danger, canAfford: false, onTap: () {}, onNoCapital: () {})
+                              else if (!isAlly)
+                                _DialogActionBtn(
+                                  icon: Icons.gavel_rounded,
+                                  label: l10n.imposeSanction,
+                                  sub: '💎${SimulationEngine.sanctionCost}',
+                                  color: AppColors.danger,
+                                  canAfford: capital >= SimulationEngine.sanctionCost,
+                                  onTap: () => doAction(
+                                    () => ref.read(gameProvider.notifier).imposeSanction(country.name),
+                                    l10n.sanctionsImposedMsg(country.name),
+                                    AppColors.danger,
+                                  ),
+                                  onNoCapital: () => notEnoughCapital(SimulationEngine.sanctionCost),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // ── Tab 2: Military ────────────────────────────
+                    _CountryMilitaryTab(
+                      country: country,
+                      game: game,
+                      isAlly: isAlly,
+                      onDeclareWar: (msg) => doAction(
+                        () => ref.read(gameProvider.notifier).declareWar(),
+                        msg,
+                        AppColors.danger,
+                      ),
+                      onSueForPeace: (msg) => doAction(
+                        () => ref.read(gameProvider.notifier).sueForPeace(),
+                        msg,
+                        AppColors.diplomacy,
+                      ),
+                      onNoCapital: () => notEnoughCapital(SimulationEngine.warDeclarationCost),
+                    ),
+                  ],
                 ),
               ),
             ] else ...[
@@ -1453,6 +1511,237 @@ class _PanelRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Country Military Tab
+// ─────────────────────────────────────────────────────────────────────────────
+class _CountryMilitaryTab extends StatelessWidget {
+  final CountryModel country;
+  final GameStateModel game;
+  final bool isAlly;
+  final void Function(String msg) onDeclareWar;
+  final void Function(String msg) onSueForPeace;
+  final VoidCallback onNoCapital;
+
+  const _CountryMilitaryTab({
+    required this.country,
+    required this.game,
+    required this.isAlly,
+    required this.onDeclareWar,
+    required this.onSueForPeace,
+    required this.onNoCapital,
+  });
+
+  // Estimated military strength 0–100 based on budget
+  double get _estStrength => (country.militaryBudgetBillion * 1.8).clamp(0, 100);
+  // Estimated troops in thousands
+  double get _estTroops => (country.militaryBudgetBillion * 5).clamp(1, 6000);
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final capital = game.politicalCapital;
+    final playerStr = game.militaryStrength;
+
+    // Threat assessment relative to player
+    final ratio = _estStrength / (playerStr + 1);
+    final threatColor = ratio > 1.3
+        ? AppColors.danger
+        : ratio > 0.7
+            ? AppColors.warning
+            : AppColors.economy;
+    final threatLabel = ratio > 1.3
+        ? l10n.threatHigh
+        : ratio > 0.7
+            ? l10n.threatMedium
+            : l10n.threatLow;
+
+    final canAffordWar = capital >= SimulationEngine.warDeclarationCost;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Intel section ────────────────────────────────────
+          Text(l10n.militaryIntel,
+              style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontFamily: 'Poppins',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5)),
+          const SizedBox(height: 10),
+          _MilRow(
+            icon: Icons.attach_money_rounded,
+            label: l10n.militaryBudgetLabel,
+            value: '\$${country.militaryBudgetBillion.toStringAsFixed(1)}B',
+            color: AppColors.economy,
+          ),
+          const SizedBox(height: 6),
+          _MilRow(
+            icon: Icons.shield_rounded,
+            label: l10n.estMilPower,
+            value: '${_estStrength.toStringAsFixed(0)}/100',
+            color: AppColors.military,
+            bar: _estStrength / 100,
+            barColor: AppColors.military,
+          ),
+          const SizedBox(height: 6),
+          _MilRow(
+            icon: Icons.people_rounded,
+            label: l10n.estTroops,
+            value: _estTroops >= 1000
+                ? '${(_estTroops / 1000).toStringAsFixed(1)}M'
+                : '${_estTroops.toStringAsFixed(0)}K',
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 6),
+          _MilRow(
+            icon: Icons.warning_amber_rounded,
+            label: l10n.threatLevel,
+            value: threatLabel,
+            color: threatColor,
+          ),
+          const SizedBox(height: 14),
+
+          // ── War status ────────────────────────────────────────
+          Text(l10n.warStatusLabel,
+              style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontFamily: 'Poppins',
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: game.atWar
+                  ? AppColors.danger.withValues(alpha: 0.12)
+                  : AppColors.economy.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: game.atWar
+                      ? AppColors.danger.withValues(alpha: 0.4)
+                      : AppColors.economy.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  game.atWar
+                      ? Icons.local_fire_department_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: game.atWar ? AppColors.danger : AppColors.economy,
+                  size: 14,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  game.atWar ? l10n.atWarStatus : l10n.notAtWarLabel,
+                  style: TextStyle(
+                    color: game.atWar ? AppColors.danger : AppColors.economy,
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // ── Actions ───────────────────────────────────────────
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (!game.atWar)
+                _DialogActionBtn(
+                  icon: Icons.gavel_rounded,
+                  label: l10n.declareWar,
+                  sub: isAlly
+                      ? l10n.cannotAttackAlly
+                      : '💎${SimulationEngine.warDeclarationCost}',
+                  color: AppColors.danger,
+                  canAfford: canAffordWar,
+                  requireRep: isAlly,
+                  onTap: () => onDeclareWar(l10n.warDeclaredMsg(country.name)),
+                  onNoCapital: onNoCapital,
+                )
+              else
+                _DialogActionBtn(
+                  icon: Icons.handshake_rounded,
+                  label: l10n.sueForPeace,
+                  sub: '💎${SimulationEngine.peaceCost}',
+                  color: AppColors.diplomacy,
+                  canAfford: capital >= SimulationEngine.peaceCost,
+                  onTap: () => onSueForPeace(l10n.peaceSuedMsg(country.name)),
+                  onNoCapital: () {},
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MilRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final double? bar;
+  final Color? barColor;
+
+  const _MilRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.bar,
+    this.barColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.textMuted, size: 13),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label,
+              style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontFamily: 'Poppins',
+                  fontSize: 11)),
+        ),
+        if (bar != null) ...[
+          SizedBox(
+            width: 60,
+            height: 4,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: bar!,
+                backgroundColor: AppColors.cardBorder,
+                valueColor: AlwaysStoppedAnimation(barColor ?? color),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Text(value,
+            style: TextStyle(
+                color: color,
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }
