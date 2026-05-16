@@ -1195,7 +1195,7 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                             _DialogActionBtn(
                               icon: Icons.handshake_rounded,
                               label: 'Form Alliance',
-                              sub: '💎${SimulationEngine.allianceCost}',
+                              sub: game.diplomaticReputation < 30 ? 'Need rep ≥30' : '💎${SimulationEngine.allianceCost}',
                               color: const Color(0xFF4CAF50),
                               canAfford: capital >= SimulationEngine.allianceCost,
                               requireRep: game.diplomaticReputation < 30,
