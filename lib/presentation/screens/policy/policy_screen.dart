@@ -113,30 +113,10 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
       body: TabBarView(
         controller: _tabs,
         children: [
-          _PolicyList(
-            category: PolicyCategory.economic,
-            game: game,
-            onApply: _applyPolicy,
-            playerCapital: game?.politicalCapital ?? 0,
-          ),
-          _PolicyList(
-            category: PolicyCategory.military,
-            game: game,
-            onApply: _applyPolicy,
-            playerCapital: game?.politicalCapital ?? 0,
-          ),
-          _PolicyList(
-            category: PolicyCategory.social,
-            game: game,
-            onApply: _applyPolicy,
-            playerCapital: game?.politicalCapital ?? 0,
-          ),
-          _PolicyList(
-            category: PolicyCategory.diplomatic,
-            game: game,
-            onApply: _applyPolicy,
-            playerCapital: game?.politicalCapital ?? 0,
-          ),
+          _PolicyList(category: PolicyCategory.economic,  game: game, onApply: _applyPolicy, onCancel: _cancelPolicy, playerCapital: game?.politicalCapital ?? 0),
+          _PolicyList(category: PolicyCategory.military,  game: game, onApply: _applyPolicy, onCancel: _cancelPolicy, playerCapital: game?.politicalCapital ?? 0),
+          _PolicyList(category: PolicyCategory.social,    game: game, onApply: _applyPolicy, onCancel: _cancelPolicy, playerCapital: game?.politicalCapital ?? 0),
+          _PolicyList(category: PolicyCategory.diplomatic, game: game, onApply: _applyPolicy, onCancel: _cancelPolicy, playerCapital: game?.politicalCapital ?? 0),
         ],
       ),
     );
@@ -147,57 +127,81 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
     if (game == null) return;
 
     if (game.politicalCapital < policy.capitalCost) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '💎 Not enough Political Capital (need ${policy.capitalCost}, have ${game.politicalCapital}).',
-            style: const TextStyle(fontFamily: 'Poppins'),
-          ),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('💎 Not enough Political Capital (need ${policy.capitalCost}, have ${game.politicalCapital}).', style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.danger,
+      ));
       return;
     }
 
     if (game.approvalRating < policy.minApprovalToApply) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'You need at least ${policy.minApprovalToApply}% approval to apply this policy.',
-            style: const TextStyle(fontFamily: 'Poppins'),
-          ),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('You need at least ${policy.minApprovalToApply}% approval to apply this policy.', style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.danger,
+      ));
       return;
     }
 
-    final alreadyActive = game.activePolicies.any((p) => p.id == policy.id);
-    if (alreadyActive) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${policy.name} is already active.',
-            style: const TextStyle(fontFamily: 'Poppins'),
-          ),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+    if (game.activePolicies.any((p) => p.id == policy.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${policy.name} is already active.', style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.warning,
+      ));
       return;
     }
 
     ref.read(gameProvider.notifier).applyPolicy(policy);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('✅ ${policy.name} has been applied!', style: const TextStyle(fontFamily: 'Poppins')),
+      backgroundColor: AppColors.success,
+      duration: const Duration(seconds: 2),
+    ));
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '✅ ${policy.name} has been applied!',
-          style: const TextStyle(fontFamily: 'Poppins'),
+  void _cancelPolicy(PolicyModel policy) {
+    final refund = (policy.capitalCost * 0.5).ceil();
+    showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Revoke "${policy.name}"?',
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Revoking this policy will:',
+              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            _RevokePoint('Stop the annual cost drain', AppColors.economy, Icons.savings_rounded),
+            _RevokePoint('Partially reverse effects (40%)', AppColors.warning, Icons.undo_rounded),
+            _RevokePoint('Refund $refund 💎 Political Capital', AppColors.accent, Icons.diamond_rounded),
+          ],
         ),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 2),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Revoke Policy', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
-    );
+    ).then((confirmed) {
+      if (confirmed != true || !mounted) return;
+      ref.read(gameProvider.notifier).removePolicy(policy.id);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('🗑 ${policy.name} revoked. +$refund 💎 refunded.', style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.warning,
+        duration: const Duration(seconds: 2),
+      ));
+    });
   }
 }
 
@@ -205,12 +209,14 @@ class _PolicyList extends StatelessWidget {
   final PolicyCategory category;
   final dynamic game;
   final void Function(PolicyModel) onApply;
+  final void Function(PolicyModel) onCancel;
   final int playerCapital;
 
   const _PolicyList({
     required this.category,
     required this.game,
     required this.onApply,
+    required this.onCancel,
     required this.playerCapital,
   });
 
@@ -231,6 +237,7 @@ class _PolicyList extends StatelessWidget {
           canAfford: playerCapital >= policy.capitalCost,
           playerCapital: playerCapital,
           onApply: () => onApply(policy),
+          onCancel: () => onCancel(policy),
         );
       },
     );
@@ -243,6 +250,7 @@ class _PolicyCard extends StatelessWidget {
   final bool canAfford;
   final int playerCapital;
   final VoidCallback onApply;
+  final VoidCallback onCancel;
 
   const _PolicyCard({
     required this.policy,
@@ -250,6 +258,7 @@ class _PolicyCard extends StatelessWidget {
     required this.canAfford,
     required this.playerCapital,
     required this.onApply,
+    required this.onCancel,
   });
 
   @override
@@ -417,7 +426,30 @@ class _PolicyCard extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    if (!isActive)
+                    if (isActive)
+                      GestureDetector(
+                        onTap: onCancel,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.cancel_outlined, color: AppColors.danger, size: 13),
+                              SizedBox(width: 4),
+                              Text(
+                                'Revoke',
+                                style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
                       ElevatedButton(
                         onPressed: canAfford ? onApply : null,
                         style: ElevatedButton.styleFrom(
@@ -442,6 +474,30 @@ class _PolicyCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RevokePoint extends StatelessWidget {
+  final String text;
+  final Color color;
+  final IconData icon;
+
+  const _RevokePoint(this.text, this.color, this.icon);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 12)),
           ),
         ],
       ),

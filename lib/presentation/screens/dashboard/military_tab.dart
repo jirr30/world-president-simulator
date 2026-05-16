@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/game_state_model.dart';
+import '../../providers/game_provider.dart';
 import '../../widgets/common/stat_card.dart';
 
-class MilitaryTab extends StatelessWidget {
+class MilitaryTab extends ConsumerWidget {
   final GameStateModel game;
 
   const MilitaryTab({super.key, required this.game});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -33,6 +35,7 @@ class MilitaryTab extends StatelessWidget {
               value: '\$${game.militaryBudget.toStringAsFixed(1)}B',
               icon: Icons.monetization_on_rounded,
               color: AppColors.military,
+              subtitle: '${(game.militaryBudget / game.gdpBillion * 100).toStringAsFixed(1)}% GDP',
             ),
             StatCard(
               label: 'Active Troops',
@@ -63,6 +66,8 @@ class MilitaryTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
+        _MilitaryBudgetSliderCard(game: game, ref: ref),
+        const SizedBox(height: 16),
         _MilitaryRankCard(strength: game.militaryStrength),
         const SizedBox(height: 16),
         _StrategicResourcesCard(game: game),
@@ -71,6 +76,259 @@ class MilitaryTab extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Military Budget Slider
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MilitaryBudgetSliderCard extends StatefulWidget {
+  final GameStateModel game;
+  final WidgetRef ref;
+
+  const _MilitaryBudgetSliderCard({required this.game, required this.ref});
+
+  @override
+  State<_MilitaryBudgetSliderCard> createState() => _MilitaryBudgetSliderCardState();
+}
+
+class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
+  late double _draftPct; // percentage of GDP
+
+  @override
+  void initState() {
+    super.initState();
+    _draftPct = _currentPct.clamp(0.5, 15.0);
+  }
+
+  @override
+  void didUpdateWidget(_MilitaryBudgetSliderCard old) {
+    super.didUpdateWidget(old);
+    // Resync when a year passes (GDP changes, budget stays same → ratio shifts)
+    if (old.game.currentYear != widget.game.currentYear) {
+      _draftPct = _currentPct.clamp(0.5, 15.0);
+    }
+  }
+
+  double get _currentPct =>
+      widget.game.militaryBudget / widget.game.gdpBillion.clamp(1.0, double.infinity) * 100;
+
+  double get _draftBudget => widget.game.gdpBillion * _draftPct / 100;
+
+  double get _strengthEffect => (_draftPct - 2.5) * 0.25;
+  double get _readinessEffect => _draftPct >= 3.0 ? 0.4 : _draftPct >= 1.5 ? 0.0 : -0.5;
+  double get _troopEffect => _draftPct >= 4.0 ? 3.0 : _draftPct >= 2.0 ? 0.0 : -2.0;
+
+  bool get _changed => (_draftPct - _currentPct).abs() >= 0.1;
+
+  String _fmt(double v) {
+    if (v >= 1000) return '\$${(v / 1000).toStringAsFixed(1)}T';
+    return '\$${v.toStringAsFixed(1)}B';
+  }
+
+  String _fmtEffect(double v, String unit) {
+    final sign = v >= 0 ? '+' : '';
+    return '$sign${v.toStringAsFixed(1)}$unit/yr';
+  }
+
+  String get _label {
+    if (_draftPct < 1.0) return 'Minimal — defense capability degrading';
+    if (_draftPct < 2.0) return 'Low — basic deterrence only';
+    if (_draftPct < 3.5) return 'Moderate — balanced defense';
+    if (_draftPct < 6.0) return 'High — strong regional power';
+    if (_draftPct < 10.0) return 'Very High — major military investment';
+    return 'Maximum — full military-industrial complex';
+  }
+
+  Color get _labelColor {
+    if (_draftPct < 1.5) return AppColors.danger;
+    if (_draftPct < 3.5) return AppColors.economy;
+    if (_draftPct < 8.0) return AppColors.warning;
+    return AppColors.danger;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.military.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.military.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.account_balance_rounded, color: AppColors.military, size: 16),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Military Budget',
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _fmt(_draftBudget),
+                    style: const TextStyle(color: AppColors.military, fontWeight: FontWeight.w800, fontFamily: 'Poppins', fontSize: 20),
+                  ),
+                  Text(
+                    '${_draftPct.toStringAsFixed(1)}% of GDP',
+                    style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Slider
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: AppColors.military,
+              inactiveTrackColor: AppColors.military.withValues(alpha: 0.2),
+              thumbColor: AppColors.military,
+              overlayColor: AppColors.military.withValues(alpha: 0.15),
+              trackHeight: 4,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+            ),
+            child: Slider(
+              value: _draftPct,
+              min: 0.5,
+              max: 15.0,
+              divisions: 29,
+              onChanged: (v) => setState(() => _draftPct = v),
+              onChangeEnd: (v) {
+                widget.ref.read(gameProvider.notifier).setMilitaryBudget(
+                  widget.game.gdpBillion * v / 100,
+                );
+              },
+            ),
+          ),
+
+          // Range labels
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('0.5%', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+                const Text('15%', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Status label
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _labelColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _label,
+              style: TextStyle(color: _labelColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Effect chips
+          Row(
+            children: [
+              _EffectChip(
+                icon: Icons.shield_rounded,
+                label: 'Strength',
+                value: _fmtEffect(_strengthEffect, ''),
+                color: _strengthEffect >= 0 ? AppColors.military : AppColors.danger,
+              ),
+              const SizedBox(width: 8),
+              _EffectChip(
+                icon: Icons.military_tech_rounded,
+                label: 'Readiness',
+                value: _fmtEffect(_readinessEffect, ''),
+                color: _readinessEffect >= 0 ? AppColors.military : AppColors.danger,
+              ),
+              const SizedBox(width: 8),
+              _EffectChip(
+                icon: Icons.people_rounded,
+                label: 'Troops',
+                value: _fmtEffect(_troopEffect, 'K'),
+                color: _troopEffect >= 0 ? AppColors.military : AppColors.danger,
+              ),
+            ],
+          ),
+
+          if (_changed) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: AppColors.military, size: 13),
+                const SizedBox(width: 5),
+                Text(
+                  'New budget ${_draftPct.toStringAsFixed(1)}% GDP (${_fmt(_draftBudget)}) takes effect next year.',
+                  style: const TextStyle(color: AppColors.military, fontFamily: 'Poppins', fontSize: 11),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EffectChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _EffectChip({required this.icon, required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 11),
+                const SizedBox(width: 3),
+                Text(label, style: TextStyle(color: color.withValues(alpha: 0.8), fontFamily: 'Poppins', fontSize: 10)),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Strategic Resources
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _StrategicResourcesCard extends StatelessWidget {
   final GameStateModel game;
@@ -175,6 +433,10 @@ class _ResourceBar extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Military Rank
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _MilitaryRankCard extends StatelessWidget {
   final double strength;

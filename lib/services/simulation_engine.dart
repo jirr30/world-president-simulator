@@ -70,6 +70,7 @@ class SimulationEngine {
     double natResources = state.naturalResourceIndex;
     double oilRes = state.oilReserves;
     double troops = state.troopCount;
+    double literacy = state.literacyRate;
 
     // Natural trends
     gdpGrowth += (happiness > 60 ? 0.5 : -0.3);
@@ -116,6 +117,12 @@ class SimulationEngine {
     gdpGrowth += (natResources > 70 ? 0.3 : 0);
     gdpGrowth += (oilRes > 70 ? 0.2 : 0);
 
+    // Military budget: each % of GDP above/below 2.5% baseline affects force
+    final budgetPct = state.militaryBudget / state.gdpBillion.clamp(1.0, double.infinity) * 100;
+    military += (budgetPct - 2.5) * 0.25;
+    milReadiness += budgetPct >= 3.0 ? 0.4 : budgetPct >= 1.5 ? 0.0 : -0.5;
+    troops += budgetPct >= 4.0 ? 3.0 : budgetPct >= 2.0 ? 0.0 : -2.0;
+
     // Tax rate effects — baseline 25%, each 5% above reduces growth & happiness
     final taxDelta = (state.taxRate - 25.0) / 5.0; // units of 5% deviation
     gdpGrowth -= taxDelta * 0.25;       // +5% tax → -0.25% GDP growth
@@ -155,6 +162,9 @@ class SimulationEngine {
     natResources += blv('research_center') * 0.5;
     education += blv('research_center') * 0.4;
     gdpGrowth += blv('research_center') * 0.1;
+
+    // Literacy slowly converges toward education index (long-term social metric)
+    literacy += (education - literacy) * 0.05;
 
     approval = _calcApproval(
       happiness: happiness,
@@ -223,6 +233,7 @@ class SimulationEngine {
       militaryReadiness: milReadiness.clamp(0.0, 100.0),
       naturalResourceIndex: natResources.clamp(0.0, 100.0),
       oilReserves: oilRes.clamp(0.0, 100.0),
+      literacyRate: literacy.clamp(0.0, 100.0),
       politicalCapital: newCapital,
       approvalHistory: newApprovalHistory,
       gdpHistory: newGdpHistory,
@@ -342,6 +353,26 @@ class SimulationEngine {
     if (avg >= 35) return 'Controversial Figure';
     if (avg >= 20) return 'Remembered Poorly';
     return 'Worst Leader in History';
+  }
+
+  // ── Policy management ────────────────────────────────────────────────────
+
+  /// Removes an active policy: stops annual cost, partially reverses stat
+  /// effects (40%), and refunds half the original capital cost.
+  static GameStateModel removePolicy(GameStateModel state, String policyId) {
+    final idx = state.activePolicies.indexWhere((p) => p.id == policyId);
+    if (idx < 0) return state;
+    final policy = state.activePolicies[idx];
+    var s = state;
+    for (final effect in policy.effects) {
+      s = _applyStat(s, effect.statName, -effect.delta * 0.4);
+    }
+    final newPolicies = List<PolicyModel>.from(s.activePolicies)..removeAt(idx);
+    final refund = (policy.capitalCost * 0.5).ceil();
+    return s.copyWith(
+      activePolicies: newPolicies,
+      politicalCapital: (s.politicalCapital + refund).clamp(0, 999),
+    );
   }
 
   // ── Diplomacy actions ─────────────────────────────────────────────────────

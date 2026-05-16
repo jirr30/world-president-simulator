@@ -82,46 +82,34 @@ class OverviewTab extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // GDP Chart
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'GDP History',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Poppins',
-                            fontSize: 13,
-                          ),
-                        ),
-                        Text(
-                          game.gdpBillion >= 1000
-                              ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
-                              : '\$${game.gdpBillion.toStringAsFixed(0)}B',
-                          style: const TextStyle(
-                            color: AppColors.economy,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+              // GDP + Approval charts side by side
+              Row(
+                children: [
+                  Expanded(
+                    child: _MiniChartCard(
+                      title: 'GDP',
+                      value: game.gdpBillion >= 1000
+                          ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
+                          : '\$${game.gdpBillion.toStringAsFixed(0)}B',
+                      color: AppColors.economy,
+                      chart: GdpChart(history: game.gdpHistory),
                     ),
-                    const SizedBox(height: 10),
-                    GdpChart(history: game.gdpHistory),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MiniChartCard(
+                      title: 'Approval',
+                      value: '${game.approvalRating.toStringAsFixed(0)}%',
+                      color: AppColors.approvalColor(game.approvalRating),
+                      chart: GdpChart(
+                        history: game.approvalHistory,
+                        lineColor: AppColors.approvalColor(game.approvalRating),
+                        fixedMinY: 0,
+                        fixedMaxY: 100,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
 
@@ -249,6 +237,41 @@ class _RelationsCard extends StatelessWidget {
                   .toList(),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniChartCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color color;
+  final Widget chart;
+
+  const _MiniChartCard({required this.title, required this.value, required this.color, required this.chart});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 12)),
+              Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          chart,
         ],
       ),
     );

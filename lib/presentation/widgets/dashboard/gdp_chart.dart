@@ -5,8 +5,18 @@ import '../../../core/constants/app_colors.dart';
 class GdpChart extends StatelessWidget {
   final List<double> history;
   final String currency;
+  final Color lineColor;
+  final double? fixedMinY;
+  final double? fixedMaxY;
 
-  const GdpChart({super.key, required this.history, this.currency = 'B'});
+  const GdpChart({
+    super.key,
+    required this.history,
+    this.currency = 'B',
+    this.lineColor = AppColors.economy,
+    this.fixedMinY,
+    this.fixedMaxY,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +38,8 @@ class GdpChart extends StatelessWidget {
         .map((e) => FlSpot(e.key.toDouble(), e.value))
         .toList();
 
-    final minY = history.reduce((a, b) => a < b ? a : b) * 0.95;
-    final maxY = history.reduce((a, b) => a > b ? a : b) * 1.05;
+    final minY = fixedMinY ?? history.reduce((a, b) => a < b ? a : b) * 0.95;
+    final maxY = fixedMaxY ?? history.reduce((a, b) => a > b ? a : b) * 1.05;
 
     return SizedBox(
       height: 120,
@@ -74,14 +84,14 @@ class GdpChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppColors.economy,
+              color: lineColor,
               barWidth: 2.5,
               isStrokeCapRound: true,
               dotData: FlDotData(
                 show: true,
                 getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
                   radius: 3,
-                  color: AppColors.economy,
+                  color: lineColor,
                   strokeWidth: 1.5,
                   strokeColor: AppColors.background,
                 ),
@@ -90,8 +100,8 @@ class GdpChart extends StatelessWidget {
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.economy.withValues(alpha: 0.3),
-                    AppColors.economy.withValues(alpha: 0.0),
+                    lineColor.withValues(alpha: 0.3),
+                    lineColor.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
