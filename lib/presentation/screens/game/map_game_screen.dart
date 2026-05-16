@@ -710,6 +710,24 @@ class _BottomHudState extends State<_BottomHud>
               value: '${game.stability.toStringAsFixed(0)}%'),
           const SizedBox(width: 6),
           _CapitalChip(capital: game.politicalCapital),
+          if (game.yearsRemaining <= 2) ...[
+            const SizedBox(width: 6),
+            _HudChip(
+              icon: game.yearsRemaining == 1 ? Icons.hourglass_empty_rounded : Icons.hourglass_bottom_rounded,
+              color: game.yearsRemaining == 1 ? AppColors.danger : AppColors.warning,
+              label: 'Term',
+              value: game.yearsRemaining == 1 ? 'Last Year' : '${game.yearsRemaining}yr left',
+            ),
+          ],
+          if (game.atWar) ...[
+            const SizedBox(width: 6),
+            _HudChip(
+              icon: Icons.local_fire_department_rounded,
+              color: AppColors.danger,
+              label: 'Status',
+              value: 'AT WAR',
+            ),
+          ],
                 ],
               ),
             ),

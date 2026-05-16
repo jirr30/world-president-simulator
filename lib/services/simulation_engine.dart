@@ -30,6 +30,7 @@ class SimulationEngine {
       educationIndex: country.literacyRate,
       healthcareIndex: 40.0 + (country.humanDevelopmentIndex * 40),
       literacyRate: country.literacyRate,
+      populationMillions: country.population / 1e6,
       diplomaticReputation: 50.0 + (country.corruptionIndex * 0.2),
       alliedCountries: country.allies,
       sanctionedCountries: country.rivals,
@@ -72,6 +73,20 @@ class SimulationEngine {
     double oilRes = state.oilReserves;
     double troops = state.troopCount;
     double literacy = state.literacyRate;
+    double population = state.populationMillions > 0
+        ? state.populationMillions
+        : state.country.population / 1e6;
+
+    // War effects — applied before other modifiers so penalties compound naturally
+    if (state.atWar) {
+      happiness -= 3.0;       // war is hard on civilians
+      stability -= 1.5;       // conflict destabilizes institutions
+      gdpGrowth -= 1.5;       // wartime economic drag
+      military -= 0.5;        // equipment attrition
+      troops -= 15.0;         // combat casualties
+      milReadiness -= 1.0;    // wear and tear on equipment
+      diplo -= 2.0;           // wars damage international standing
+    }
 
     // Natural trends
     gdpGrowth += (happiness > 60 ? 0.5 : -0.3);
@@ -174,6 +189,17 @@ class SimulationEngine {
     // Literacy slowly converges toward education index (long-term social metric)
     literacy += (education - literacy) * 0.05;
 
+    // Population growth: baseline 1%/yr, modified by healthcare (+/-0.5%) and happiness (+/-0.25%)
+    final popGrowthRate = (1.0
+        + (healthcare - 50) * 0.01
+        + (happiness - 50) * 0.005
+        + (state.atWar ? -0.3 : 0.0)).clamp(0.1, 3.0);
+    population *= 1.0 + popGrowthRate / 100;
+
+    // Agricultural output: direct building boosts + GDP-scaled growth
+    agriOut += blv('farm_complex') * state.gdpBillion * 0.005;
+    agriOut += blv('irrigation') * state.gdpBillion * 0.002;
+
     approval = _calcApproval(
       happiness: happiness,
       gdpGrowth: gdpGrowth,
@@ -236,12 +262,13 @@ class SimulationEngine {
       diplomaticReputation: diplo.clamp(0.0, 100.0),
       treasury: treasury,
       foodSecurity: foodSec.clamp(0.0, 100.0),
-      agriculturalOutput: agriOut.clamp(0.0, state.gdpBillion * 0.5),
+      agriculturalOutput: agriOut.clamp(0.0, newGdp * 1.5),
       troopCount: troops.clamp(0.0, 10000.0),
       militaryReadiness: milReadiness.clamp(0.0, 100.0),
       naturalResourceIndex: natResources.clamp(0.0, 100.0),
       oilReserves: oilRes.clamp(0.0, 100.0),
       literacyRate: literacy.clamp(0.0, 100.0),
+      populationMillions: population.clamp(0.01, 20000.0),
       politicalCapital: newCapital,
       approvalHistory: newApprovalHistory,
       gdpHistory: newGdpHistory,
@@ -339,18 +366,52 @@ class SimulationEngine {
         return s.copyWith(militaryReadiness: (s.militaryReadiness + delta).clamp(0, 100));
       case 'Tax Rate':
         return s.copyWith(taxRate: (s.taxRate + delta).clamp(5.0, 60.0));
+      case 'At War':
+        return s.copyWith(atWar: delta > 0);
       default:
         return s;
     }
   }
 
-  // Returns a forced (non-random) event if current game conditions demand it.
-  // These override the normal random event schedule.
+  // Returns the highest-priority forced event for the current game state.
+  // Forced events always override the random event schedule.
   static EventModel? getForcedEvent(GameStateModel state) {
+    // Priority 1: Tax protests (taxRate ≥ 45% + happiness < 40)
     if (state.taxRate >= 45.0 && state.happiness < 40.0) {
       return EventsData.taxProtestEvent(state.taxRate);
     }
+    // Priority 2: Peace offer when at war and military is critically weak
+    if (state.atWar && state.militaryStrength < 25.0) {
+      return EventsData.peaceOfferEvent();
+    }
+    // Priority 3: Election season in the penultimate year of term
+    if (state.yearsRemaining == 1) {
+      return EventsData.electionSeasonEvent(state.approvalRating);
+    }
     return null;
+  }
+
+  // ── War actions ───────────────────────────────────────────────────────────
+
+  static const int warDeclarationCost = 15; // 💎 political capital
+  static const int peaceCost = 5;
+
+  static GameStateModel declareWar(GameStateModel state) {
+    return state.copyWith(
+      atWar: true,
+      politicalCapital: (state.politicalCapital - warDeclarationCost).clamp(0, 999),
+      diplomaticReputation: (state.diplomaticReputation - 5).clamp(0, 100),
+    );
+  }
+
+  static GameStateModel sueForPeace(GameStateModel state) {
+    return state.copyWith(
+      atWar: false,
+      politicalCapital: (state.politicalCapital - peaceCost).clamp(0, 999),
+      happiness: (state.happiness + 5).clamp(0, 100),
+      stability: (state.stability + 3).clamp(0, 100),
+      diplomaticReputation: (state.diplomaticReputation + 3).clamp(0, 100),
+    );
   }
 
   static String getApprovalLabel(double approval) {

@@ -40,6 +40,7 @@ class GameStateModel {
   final double educationIndex; // 0–100
   final double healthcareIndex; // 0–100
   final double literacyRate;
+  final double populationMillions; // live population (millions), evolves each year
 
   // Diplomatic
   final double diplomaticReputation; // 0–100
@@ -89,6 +90,7 @@ class GameStateModel {
     required this.educationIndex,
     required this.healthcareIndex,
     required this.literacyRate,
+    this.populationMillions = 0.0,
     required this.diplomaticReputation,
     this.alliedCountries = const [],
     this.sanctionedCountries = const [],
@@ -117,7 +119,10 @@ class GameStateModel {
   int get yearsInOffice => currentYear - termStartYear;
   int get yearsRemaining => termDurationYears - yearsInOffice;
   bool get isTermOver => yearsInOffice >= termDurationYears;
-  double get gdpPerCapita => gdpBillion * 1e9 / country.population;
+  double get gdpPerCapita {
+    final pop = populationMillions > 0 ? populationMillions * 1e6 : country.population.toDouble();
+    return gdpBillion * 1e9 / pop;
+  }
 
   String get leaderTitle {
     switch (country.governmentType) {
@@ -160,6 +165,7 @@ class GameStateModel {
     double? educationIndex,
     double? healthcareIndex,
     double? literacyRate,
+    double? populationMillions,
     double? diplomaticReputation,
     List<String>? alliedCountries,
     List<String>? sanctionedCountries,
@@ -197,6 +203,7 @@ class GameStateModel {
       educationIndex: educationIndex ?? this.educationIndex,
       healthcareIndex: healthcareIndex ?? this.healthcareIndex,
       literacyRate: literacyRate ?? this.literacyRate,
+      populationMillions: populationMillions ?? this.populationMillions,
       diplomaticReputation: diplomaticReputation ?? this.diplomaticReputation,
       alliedCountries: alliedCountries ?? this.alliedCountries,
       sanctionedCountries: sanctionedCountries ?? this.sanctionedCountries,

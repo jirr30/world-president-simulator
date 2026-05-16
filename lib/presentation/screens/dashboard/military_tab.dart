@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/game_state_model.dart';
+import '../../../services/simulation_engine.dart';
 import '../../providers/game_provider.dart';
 import '../../widgets/common/stat_card.dart';
 
@@ -66,6 +67,8 @@ class MilitaryTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
+        _WarControlsCard(game: game, ref: ref),
+        const SizedBox(height: 16),
         _MilitaryBudgetSliderCard(game: game, ref: ref),
         const SizedBox(height: 16),
         _MilitaryRankCard(strength: game.militaryStrength),
@@ -73,6 +76,335 @@ class MilitaryTab extends ConsumerWidget {
         _StrategicResourcesCard(game: game),
         const SizedBox(height: 80),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// War Controls
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _WarControlsCard extends StatefulWidget {
+  final GameStateModel game;
+  final WidgetRef ref;
+
+  const _WarControlsCard({required this.game, required this.ref});
+
+  @override
+  State<_WarControlsCard> createState() => _WarControlsCardState();
+}
+
+class _WarControlsCardState extends State<_WarControlsCard> {
+  Future<void> _confirmDeclare() async {
+    final capital = widget.game.politicalCapital;
+    if (capital < SimulationEngine.warDeclarationCost) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Need 💎${SimulationEngine.warDeclarationCost} political capital to declare war.',
+            style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: AppColors.danger,
+      ));
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('⚔️  Declare War?',
+            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('This will put your country on a war footing.',
+                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+            const SizedBox(height: 12),
+            _WarEffectRow('Cost', '💎${SimulationEngine.warDeclarationCost} political capital', AppColors.warning),
+            _WarEffectRow('Diplomatic Rep', '−5', AppColors.danger),
+            _WarEffectRow('Happiness / yr', '−3.0', AppColors.danger),
+            _WarEffectRow('Stability / yr', '−1.5', AppColors.danger),
+            _WarEffectRow('GDP Growth / yr', '−1.5%', AppColors.danger),
+            _WarEffectRow('Troops / yr', '−15K (losses)', AppColors.danger),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Declare War', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    widget.ref.read(gameProvider.notifier).declareWar();
+  }
+
+  Future<void> _confirmPeace() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('🕊️  Sue for Peace?',
+            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('End the conflict and return to peacetime.',
+                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+            const SizedBox(height: 12),
+            _WarEffectRow('Cost', '💎${SimulationEngine.peaceCost} political capital', AppColors.warning),
+            _WarEffectRow('Happiness', '+5', AppColors.economy),
+            _WarEffectRow('Stability', '+3', AppColors.economy),
+            _WarEffectRow('Diplomatic Rep', '+3', AppColors.economy),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.economy),
+            child: const Text('Sue for Peace', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    widget.ref.read(gameProvider.notifier).sueForPeace();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final game = widget.game;
+    final atWar = game.atWar;
+    final borderColor = atWar ? AppColors.danger : AppColors.cardBorder;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor.withValues(alpha: atWar ? 0.5 : 1.0)),
+        gradient: atWar
+            ? LinearGradient(
+                colors: [AppColors.danger.withValues(alpha: 0.08), AppColors.card],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: (atWar ? AppColors.danger : AppColors.military).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  atWar ? Icons.local_fire_department_rounded : Icons.handshake_rounded,
+                  color: atWar ? AppColors.danger : AppColors.military,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  atWar ? 'Active Conflict' : 'War & Conflict',
+                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (atWar ? AppColors.danger : AppColors.economy).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  atWar ? 'AT WAR' : 'AT PEACE',
+                  style: TextStyle(
+                    color: atWar ? AppColors.danger : AppColors.economy,
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (atWar) ...[
+            const SizedBox(height: 12),
+            const Divider(color: AppColors.cardBorder, height: 1),
+            const SizedBox(height: 10),
+            const Text(
+              'Ongoing war penalties (per year):',
+              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _WarEffectChip(Icons.mood_bad_rounded, 'Happiness', '−3/yr', AppColors.danger),
+                const SizedBox(width: 6),
+                _WarEffectChip(Icons.shield_outlined, 'Stability', '−1.5/yr', AppColors.danger),
+                const SizedBox(width: 6),
+                _WarEffectChip(Icons.trending_down_rounded, 'GDP', '−1.5%/yr', AppColors.danger),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _WarEffectChip(Icons.people_rounded, 'Troops', '−15K/yr', AppColors.danger),
+                const SizedBox(width: 6),
+                _WarEffectChip(Icons.military_tech_rounded, 'Readiness', '−1/yr', AppColors.danger),
+                const SizedBox(width: 6),
+                _WarEffectChip(Icons.public_rounded, 'Diplo Rep', '−2/yr', AppColors.danger),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (game.militaryStrength < 25.0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.crisis_alert_rounded, color: AppColors.danger, size: 13),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Military critically weak — peace negotiations will be forced at end of year.',
+                        style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _confirmPeace,
+                icon: const Icon(Icons.handshake_rounded, size: 16),
+                label: Text('Sue for Peace  (💎${SimulationEngine.peaceCost})',
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.economy,
+                  side: const BorderSide(color: AppColors.economy),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Your country is currently at peace.',
+              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Declaring war will impose severe annual penalties on happiness, stability, and GDP growth until peace is negotiated.',
+              style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: game.politicalCapital >= SimulationEngine.warDeclarationCost
+                    ? _confirmDeclare
+                    : null,
+                icon: const Icon(Icons.local_fire_department_rounded, size: 16),
+                label: Text('Declare War  (💎${SimulationEngine.warDeclarationCost})',
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: BorderSide(
+                    color: game.politicalCapital >= SimulationEngine.warDeclarationCost
+                        ? AppColors.danger
+                        : AppColors.textMuted,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WarEffectRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _WarEffectRow(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12))),
+          Text(value, style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _WarEffectChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _WarEffectChip(this.icon, this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(icon, color: color, size: 10),
+              const SizedBox(width: 3),
+              Text(label, style: TextStyle(color: color.withValues(alpha: 0.8), fontFamily: 'Poppins', fontSize: 9)),
+            ]),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
     );
   }
 }

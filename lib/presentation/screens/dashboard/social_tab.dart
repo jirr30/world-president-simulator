@@ -158,6 +158,22 @@ class _PopulationCard extends StatelessWidget {
 
   const _PopulationCard({required this.game});
 
+  String get _popFormatted {
+    final m = game.populationMillions > 0
+        ? game.populationMillions
+        : game.country.population / 1e6;
+    if (m >= 1000) return '${(m / 1000).toStringAsFixed(2)}B';
+    if (m >= 1) return '${m.toStringAsFixed(1)}M';
+    return '${(m * 1000).toStringAsFixed(0)}K';
+  }
+
+  String get _growthRate {
+    final hc = game.healthcareIndex;
+    final hap = game.happiness;
+    final rate = (1.0 + (hc - 50) * 0.01 + (hap - 50) * 0.005 + (game.atWar ? -0.3 : 0.0)).clamp(0.1, 3.0);
+    return '${rate >= 1.0 ? '+' : ''}${rate.toStringAsFixed(2)}%/yr';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -180,7 +196,8 @@ class _PopulationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _PopStat('Total Population', game.country.populationFormatted, Icons.groups_rounded),
+          _PopStat('Total Population', _popFormatted, Icons.groups_rounded),
+          _PopStat('Growth Rate', _growthRate, Icons.trending_up_rounded),
           _PopStat('Capital City', game.country.capital, Icons.location_city_rounded),
           _PopStat('Continent', game.country.continent, Icons.public_rounded),
           _PopStat('Government', game.country.governmentLabel, Icons.account_balance_rounded),

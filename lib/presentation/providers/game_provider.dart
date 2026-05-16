@@ -51,6 +51,18 @@ class GameNotifier extends StateNotifier<GameStateModel?> {
     GameSaveService.save(state!);
   }
 
+  void declareWar() {
+    if (state == null) return;
+    state = SimulationEngine.declareWar(state!);
+    GameSaveService.save(state!);
+  }
+
+  void sueForPeace() {
+    if (state == null) return;
+    state = SimulationEngine.sueForPeace(state!);
+    GameSaveService.save(state!);
+  }
+
   void setTaxRate(double rate) {
     if (state == null) return;
     state = state!.copyWith(taxRate: rate.clamp(5.0, 60.0));

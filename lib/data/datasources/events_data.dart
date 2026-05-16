@@ -413,6 +413,94 @@ class EventsData {
     return eligible.take(count).toList();
   }
 
+  // Forced event: at war AND militaryStrength < 25
+  static EventModel peaceOfferEvent() => EventModel(
+    id: 'peace_offer',
+    emoji: '🕊️',
+    title: 'Peace Negotiations',
+    description:
+        'Your military is struggling under sustained combat losses. '
+        'International mediators have stepped in and are offering to broker a ceasefire. '
+        'This may be your last chance to end the conflict before the country collapses.',
+    severity: EventSeverity.high,
+    choices: [
+      EventChoice(
+        label: 'Accept Ceasefire',
+        description: 'End the war under international mediation.',
+        effects: [
+          StatEffect('At War', -1.0),
+          StatEffect('Happiness', 8.0),
+          StatEffect('Diplomatic Rep', 5.0),
+          StatEffect('Stability', 6.0),
+          StatEffect('Approval', 4.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Fight On',
+        description: 'Reject the offer and continue fighting to the end.',
+        effects: [
+          StatEffect('Military Strength', -6.0),
+          StatEffect('Happiness', -7.0),
+          StatEffect('Approval', -5.0),
+          StatEffect('Stability', -3.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Direct Talks',
+        description: 'Negotiate directly with the opposing side on your own terms.',
+        effects: [
+          StatEffect('At War', -1.0),
+          StatEffect('Diplomatic Rep', -2.0),
+          StatEffect('Stability', 3.0),
+          StatEffect('Happiness', 5.0),
+        ],
+      ),
+    ],
+  );
+
+  // Forced event: yearsRemaining == 1 (last year of term)
+  static EventModel electionSeasonEvent(double approval) => EventModel(
+    id: 'election_season',
+    emoji: '🗳️',
+    title: 'Election Season Begins',
+    description: approval >= 55
+        ? 'Your term ends next year and the polls are in your favor. '
+          'Use this final year to cement your legacy.'
+        : 'Your term ends next year and the opposition is gaining momentum. '
+          'Your decisions this year will define how history remembers you.',
+    severity: approval >= 55 ? EventSeverity.low : EventSeverity.medium,
+    choices: [
+      EventChoice(
+        label: 'Populist Campaign',
+        description: 'Promise tax cuts and expanded social programs to win votes.',
+        effects: [
+          StatEffect('Happiness', 7.0),
+          StatEffect('Approval', 9.0),
+          StatEffect('National Debt', -4.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Highlight Achievements',
+        description: 'Run on your record and long-term economic vision.',
+        effects: [
+          StatEffect('Approval', 5.0),
+          StatEffect('Diplomatic Rep', 3.0),
+          StatEffect('Stability', 3.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Economic Push',
+        description: 'Launch a final wave of economic reforms to boost growth.',
+        effects: [
+          StatEffect('GDP Growth', 2.5),
+          StatEffect('Approval', 3.0),
+          StatEffect('Employment', 2.0),
+          StatEffect('Happiness', 2.0),
+        ],
+      ),
+    ],
+  );
+
   // Forced event: tax rate ≥ 45% AND happiness < 40
   static EventModel taxProtestEvent(double taxRate) => EventModel(
     id: 'tax_protest',
