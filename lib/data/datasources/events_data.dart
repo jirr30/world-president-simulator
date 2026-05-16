@@ -505,6 +505,54 @@ class EventsData {
     ],
   );
 
+  // Forced event: atWar AND warProgress >= 100 (enemy forces fully degraded)
+  static EventModel warVictoryEvent() => EventModel(
+    id: 'war_victory',
+    emoji: '🏆',
+    title: 'Military Victory',
+    description:
+        'Your armed forces have systematically degraded the enemy military. '
+        'The opposing nation is on the brink of collapse — their generals are requesting talks. '
+        'How will you end this conflict?',
+    severity: EventSeverity.high,
+    choices: [
+      EventChoice(
+        label: 'Demand Unconditional Surrender',
+        description: 'Force the enemy to surrender completely on your terms.',
+        effects: [
+          StatEffect('At War', -1.0),
+          StatEffect('Military Strength', 5.0),
+          StatEffect('Approval', 12.0),
+          StatEffect('Diplomatic Rep', -8.0),
+          StatEffect('Stability', 5.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Offer Generous Peace Terms',
+        description: 'End the war with a fair settlement to build lasting peace.',
+        effects: [
+          StatEffect('At War', -1.0),
+          StatEffect('Diplomatic Rep', 10.0),
+          StatEffect('Happiness', 8.0),
+          StatEffect('Approval', 8.0),
+          StatEffect('Stability', 6.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Occupy & Annex Territory',
+        description: 'Claim enemy land as war reparations to expand your nation.',
+        effects: [
+          StatEffect('At War', -1.0),
+          StatEffect('GDP Growth', 1.5),
+          StatEffect('Natural Resources', 8.0),
+          StatEffect('Diplomatic Rep', -15.0),
+          StatEffect('Stability', -3.0),
+          StatEffect('Approval', 6.0),
+        ],
+      ),
+    ],
+  );
+
   // Forced event: tax rate ≥ 45% AND happiness < 40
   static EventModel taxProtestEvent(double taxRate) => EventModel(
     id: 'tax_protest',

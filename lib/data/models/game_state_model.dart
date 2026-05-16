@@ -24,6 +24,7 @@ class GameStateModel {
   final double militaryStrength; // 0–100
   final double militaryBudget; // billion USD
   final bool atWar;
+  final double warProgress; // 0–100: enemy degradation, resets to 0 on peace/victory
   final double troopCount; // thousands of active personnel
   final double militaryReadiness; // 0–100 equipment & training readiness
 
@@ -81,6 +82,7 @@ class GameStateModel {
     required this.militaryStrength,
     required this.militaryBudget,
     this.atWar = false,
+    this.warProgress = 0.0,
     this.troopCount = 100,
     this.militaryReadiness = 50,
     this.foodSecurity = 50,
@@ -155,6 +157,7 @@ class GameStateModel {
     double? militaryStrength,
     double? militaryBudget,
     bool? atWar,
+    double? warProgress,
     double? troopCount,
     double? militaryReadiness,
     double? foodSecurity,
@@ -194,6 +197,7 @@ class GameStateModel {
       militaryStrength: militaryStrength ?? this.militaryStrength,
       militaryBudget: militaryBudget ?? this.militaryBudget,
       atWar: atWar ?? this.atWar,
+      warProgress: warProgress ?? this.warProgress,
       troopCount: troopCount ?? this.troopCount,
       militaryReadiness: militaryReadiness ?? this.militaryReadiness,
       foodSecurity: foodSecurity ?? this.foodSecurity,

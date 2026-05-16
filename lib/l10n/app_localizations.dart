@@ -2761,6 +2761,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next →'**
   String get nextArrow;
+
+  /// No description provided for @warProgressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enemy Degradation'**
+  String get warProgressLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -72,6 +72,7 @@ class SimulationEngine {
     double oilRes = state.oilReserves;
     double troops = state.troopCount;
     double literacy = state.literacyRate;
+    double warProgress = state.warProgress;
     double population = state.populationMillions > 0
         ? state.populationMillions
         : state.country.population / 1e6;
@@ -85,6 +86,8 @@ class SimulationEngine {
       troops -= 15.0;         // combat casualties
       milReadiness -= 1.0;    // wear and tear on equipment
       diplo -= 2.0;           // wars damage international standing
+      // Accumulate war progress based on player's military effectiveness
+      warProgress += (10.0 + military * 0.15).clamp(5.0, 25.0);
     }
 
     // Natural trends
@@ -281,6 +284,7 @@ class SimulationEngine {
       literacyRate: literacy.clamp(0.0, 100.0),
       populationMillions: population.clamp(0.01, 20000.0),
       politicalCapital: newCapital,
+      warProgress: warProgress.clamp(0.0, 100.0),
       approvalHistory: newApprovalHistory,
       gdpHistory: newGdpHistory,
     );
@@ -387,6 +391,10 @@ class SimulationEngine {
   // Returns the highest-priority forced event for the current game state.
   // Forced events always override the random event schedule.
   static EventModel? getForcedEvent(GameStateModel state) {
+    // Priority 0: War victory — enemy forces fully degraded
+    if (state.atWar && state.warProgress >= 100.0) {
+      return EventsData.warVictoryEvent();
+    }
     // Priority 1: Tax protests (taxRate ≥ 45% + happiness < 40)
     if (state.taxRate >= 45.0 && state.happiness < 40.0) {
       return EventsData.taxProtestEvent(state.taxRate);
@@ -410,6 +418,7 @@ class SimulationEngine {
   static GameStateModel declareWar(GameStateModel state) {
     return state.copyWith(
       atWar: true,
+      warProgress: 0,
       politicalCapital: (state.politicalCapital - warDeclarationCost).clamp(0, 999),
       diplomaticReputation: (state.diplomaticReputation - 5).clamp(0, 100),
     );
@@ -418,6 +427,7 @@ class SimulationEngine {
   static GameStateModel sueForPeace(GameStateModel state) {
     return state.copyWith(
       atWar: false,
+      warProgress: 0,
       politicalCapital: (state.politicalCapital - peaceCost).clamp(0, 999),
       happiness: (state.happiness + 5).clamp(0, 100),
       stability: (state.stability + 3).clamp(0, 100),

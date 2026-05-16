@@ -446,5 +446,6 @@
   "tipCounter": "TIP {step}/{total}",
   "skipLabel": "Lewati",
   "gotItLabel": "Mengerti!",
-  "nextArrow": "Selanjutnya →"
+  "nextArrow": "Selanjutnya →",
+  "warProgressLabel": "Degradasi Musuh"
 }

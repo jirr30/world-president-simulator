@@ -1506,4 +1506,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nextArrow => 'Next →';
+
+  @override
+  String get warProgressLabel => 'Enemy Degradation';
 }

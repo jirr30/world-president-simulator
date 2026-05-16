@@ -1652,6 +1652,17 @@ class _CountryMilitaryTab extends StatelessWidget {
               ],
             ),
           ),
+          if (game.atWar) ...[
+            const SizedBox(height: 8),
+            _MilRow(
+              icon: Icons.my_location_rounded,
+              label: l10n.warProgressLabel,
+              value: '${game.warProgress.toStringAsFixed(0)}%',
+              color: AppColors.danger,
+              bar: game.warProgress / 100,
+              barColor: AppColors.danger,
+            ),
+          ],
           const SizedBox(height: 14),
 
           // ── Actions ───────────────────────────────────────────

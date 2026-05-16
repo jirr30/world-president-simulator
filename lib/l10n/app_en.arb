@@ -1507,5 +1507,8 @@
   "@gotItLabel": {},
 
   "nextArrow": "Next →",
-  "@nextArrow": {}
+  "@nextArrow": {},
+
+  "warProgressLabel": "Enemy Degradation",
+  "@warProgressLabel": {}
 }

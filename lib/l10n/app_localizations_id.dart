@@ -1508,4 +1508,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get nextArrow => 'Selanjutnya →';
+
+  @override
+  String get warProgressLabel => 'Degradasi Musuh';
 }
