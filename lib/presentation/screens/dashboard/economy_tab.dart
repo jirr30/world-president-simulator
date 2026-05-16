@@ -101,7 +101,6 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
   @override
   void didUpdateWidget(_TaxSliderCard old) {
     super.didUpdateWidget(old);
-    // Sync only if the saved value changed externally (year advance)
     if ((old.game.taxRate - widget.game.taxRate).abs() > 0.1 &&
         (_draft - old.game.taxRate).abs() < 0.1) {
       _draft = widget.game.taxRate;
@@ -115,18 +114,21 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
     if (_draft < 28) return 'Moderate — balanced budget';
     if (_draft < 35) return 'High — strong public investment';
     if (_draft < 45) return 'Very High — risk of capital flight';
-    return 'Extreme — severe economic drag';
+    return 'Extreme — capital flight + protest risk';
+  }
+
+  Color get _accentColor {
+    if (_draft >= 45.0) return AppColors.danger;
+    if (_draft >= 28.0) return AppColors.warning;
+    return AppColors.diplomacy;
   }
 
   Color get _labelColor {
-    if (_draft < 15) return AppColors.economy;
-    if (_draft < 28) return AppColors.economy;
-    if (_draft < 35) return AppColors.warning;
-    if (_draft < 45) return AppColors.warning;
-    return AppColors.danger;
+    if (_draft >= 45.0) return AppColors.danger;
+    if (_draft >= 28.0) return AppColors.warning;
+    return AppColors.economy;
   }
 
-  // GDP growth effect relative to 25% baseline
   double get _gdpEffect {
     final taxDelta = (_draft - 25.0) / 5.0;
     double effect = -(taxDelta * 0.25);
@@ -134,7 +136,6 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
     return effect;
   }
 
-  // Happiness effect relative to 25% baseline
   double get _happinessEffect {
     final taxDelta = (_draft - 25.0) / 5.0;
     double effect = -(taxDelta * 0.4);
@@ -142,9 +143,25 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
     return effect;
   }
 
-  double get _projectedIncome => widget.game.gdpBillion * _draft / 100;
+  double get _capitalFlightGdp {
+    if (_draft < 45.0) return 0.0;
+    return -((_draft - 45.0) / 15.0) * 1.5;
+  }
 
+  double get _capitalFlightStability {
+    if (_draft < 45.0) return 0.0;
+    return -((_draft - 45.0) / 15.0) * 0.5;
+  }
+
+  double get _capitalFlightUnemployment {
+    if (_draft < 45.0) return 0.0;
+    return ((_draft - 45.0) / 15.0) * 0.2;
+  }
+
+  double get _projectedIncome => widget.game.gdpBillion * _draft / 100;
   bool get _changed => (_draft - widget.game.taxRate).abs() >= 0.5;
+  bool get _inDangerZone => _draft >= 45.0;
+  bool get _protestImminent => _inDangerZone && widget.game.happiness < 40.0;
 
   @override
   Widget build(BuildContext context) {
@@ -157,21 +174,21 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.diplomacy.withValues(alpha: 0.3)),
+        border: Border.all(color: _accentColor.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // ── Header ──────────────────────────────────────────
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: AppColors.diplomacy.withValues(alpha: 0.15),
+                  color: _accentColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.receipt_long_rounded, color: AppColors.diplomacy, size: 16),
+                child: Icon(Icons.receipt_long_rounded, color: _accentColor, size: 16),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -180,22 +197,21 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
                   style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
                 ),
               ),
-              // Big rate display
               Text(
                 '${_draft.toStringAsFixed(0)}%',
-                style: const TextStyle(color: AppColors.diplomacy, fontWeight: FontWeight.w800, fontFamily: 'Poppins', fontSize: 22),
+                style: TextStyle(color: _accentColor, fontWeight: FontWeight.w800, fontFamily: 'Poppins', fontSize: 22),
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Slider
+          // ── Slider ───────────────────────────────────────────
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.diplomacy,
-              inactiveTrackColor: AppColors.diplomacy.withValues(alpha: 0.2),
-              thumbColor: AppColors.diplomacy,
-              overlayColor: AppColors.diplomacy.withValues(alpha: 0.15),
+              activeTrackColor: _accentColor,
+              inactiveTrackColor: _accentColor.withValues(alpha: 0.2),
+              thumbColor: _accentColor,
+              overlayColor: _accentColor.withValues(alpha: 0.15),
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             ),
@@ -205,26 +221,18 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
               max: 60,
               divisions: 55,
               onChanged: (v) => setState(() => _draft = v),
-              onChangeEnd: (v) {
-                widget.ref.read(gameProvider.notifier).setTaxRate(v);
-              },
+              onChangeEnd: (v) => widget.ref.read(gameProvider.notifier).setTaxRate(v),
             ),
           ),
 
-          // Min/max labels
+          // ── Zone bar (replaces min/max labels) ──────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('5%', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
-                const Text('60%', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
-              ],
-            ),
+            child: _TaxZoneBar(taxRate: _draft),
           ),
           const SizedBox(height: 12),
 
-          // Status label
+          // ── Status label ─────────────────────────────────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -238,7 +246,7 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
           ),
           const SizedBox(height: 12),
 
-          // Effects row
+          // ── Primary effects ───────────────────────────────────
           Row(
             children: [
               _EffectChip(
@@ -264,7 +272,87 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
             ],
           ),
 
-          // Pending change notice
+          // ── Capital flight effects (only when ≥ 45%) ─────────
+          if (_inDangerZone) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _EffectChip(
+                  icon: Icons.flight_takeoff_rounded,
+                  label: 'Capital Flight',
+                  value: '${_capitalFlightGdp.toStringAsFixed(2)}%/yr',
+                  color: AppColors.danger,
+                ),
+                const SizedBox(width: 8),
+                _EffectChip(
+                  icon: Icons.shield_outlined,
+                  label: 'Stability',
+                  value: '${_capitalFlightStability.toStringAsFixed(2)}/yr',
+                  color: AppColors.danger,
+                ),
+                const SizedBox(width: 8),
+                _EffectChip(
+                  icon: Icons.work_off_rounded,
+                  label: 'Unemployment',
+                  value: '+${_capitalFlightUnemployment.toStringAsFixed(2)}%/yr',
+                  color: AppColors.danger,
+                ),
+              ],
+            ),
+          ],
+
+          // ── Protest imminent banner ───────────────────────────
+          if (_protestImminent) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.45)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.crisis_alert_rounded, color: AppColors.danger, size: 15),
+                  const SizedBox(width: 7),
+                  const Expanded(
+                    child: Text(
+                      'PROTEST CONDITIONS ACTIVE — Mass protests will erupt next year. '
+                      'Lower tax below 45% or raise happiness above 40 to prevent them.',
+                      style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_inDangerZone) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 15),
+                  const SizedBox(width: 7),
+                  const Expanded(
+                    child: Text(
+                      'Capital flight active — investors are leaving. '
+                      'If happiness falls below 40, mass protests will erupt.',
+                      style: TextStyle(color: AppColors.warning, fontFamily: 'Poppins', fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Pending change notice ─────────────────────────────
           if (_changed) ...[
             const SizedBox(height: 10),
             Row(
@@ -283,6 +371,113 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tax Zone Bar: gradient track showing Safe / Warning / Crisis zones
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TaxZoneBar extends StatelessWidget {
+  final double taxRate;
+  const _TaxZoneBar({required this.taxRate});
+
+  // Zone boundaries (must match simulation_engine thresholds)
+  static const double _min = 5.0, _max = 60.0;
+  static const double _warnAt = 28.0, _dangerAt = 45.0;
+
+  @override
+  Widget build(BuildContext context) {
+    const range = _max - _min;
+    final warnStop = (_warnAt - _min) / range;   // ≈ 0.418
+    final dangerStop = (_dangerAt - _min) / range; // ≈ 0.727
+    final thumbPct = (taxRate.clamp(_min, _max) - _min) / range;
+
+    return LayoutBuilder(builder: (_, box) {
+      final w = box.maxWidth;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 12,
+            child: Stack(clipBehavior: Clip.none, children: [
+              // Gradient track
+              Positioned.fill(
+                top: 3,
+                bottom: 3,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: const [
+                          AppColors.economy,
+                          AppColors.economy,
+                          AppColors.warning,
+                          AppColors.danger,
+                        ],
+                        stops: [0.0, warnStop, dangerStop, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Zone separator at warning threshold
+              Positioned(
+                left: w * warnStop - 1,
+                top: 3,
+                bottom: 3,
+                child: Container(width: 2, color: AppColors.background.withValues(alpha: 0.85)),
+              ),
+              // Zone separator at danger threshold
+              Positioned(
+                left: w * dangerStop - 1,
+                top: 3,
+                bottom: 3,
+                child: Container(width: 2, color: AppColors.background.withValues(alpha: 0.85)),
+              ),
+              // Current rate needle
+              Positioned(
+                left: (w * thumbPct - 1.5).clamp(0.0, w - 3.0),
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(1.5),
+                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2)],
+                  ),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          // Zone labels proportional to zone widths
+          Row(
+            children: [
+              Expanded(
+                flex: 42, // safe zone: ~41.8% of range
+                child: Text('Safe', textAlign: TextAlign.left,
+                    style: const TextStyle(color: AppColors.economy, fontSize: 9, fontFamily: 'Poppins')),
+              ),
+              Expanded(
+                flex: 31, // warning zone: ~30.9% of range
+                child: Text('Warning', textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.warning, fontSize: 9, fontFamily: 'Poppins')),
+              ),
+              Expanded(
+                flex: 27, // crisis zone: ~27.3% of range
+                child: Text('Crisis', textAlign: TextAlign.right,
+                    style: const TextStyle(color: AppColors.danger, fontSize: 9, fontFamily: 'Poppins')),
+              ),
+            ],
+          ),
+        ],
+      );
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _EffectChip extends StatelessWidget {
   final IconData icon;

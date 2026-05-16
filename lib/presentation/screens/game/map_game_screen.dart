@@ -166,6 +166,13 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
   }
 
   void _triggerEvent(GameStateModel state) {
+    // Forced events (e.g. tax protests) always fire regardless of year schedule
+    final forced = SimulationEngine.getForcedEvent(state);
+    if (forced != null) {
+      ref.read(pendingEventProvider.notifier).state = forced;
+      context.go('/event');
+      return;
+    }
     if (state.currentYear % 3 != 0) {
       final events = EventsData.getRandomEvents(count: 1, continent: state.country.continent);
       if (events.isNotEmpty) {

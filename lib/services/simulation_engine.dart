@@ -3,6 +3,7 @@ import '../data/models/game_state_model.dart';
 import '../data/models/policy_model.dart';
 import '../data/models/event_model.dart';
 import '../data/datasources/buildings_data.dart';
+import '../data/datasources/events_data.dart';
 
 class SimulationEngine {
   SimulationEngine._();
@@ -132,6 +133,13 @@ class SimulationEngine {
     if (state.taxRate < 15) {
       gdpGrowth += 0.5;
       happiness -= 0.5; // less public spending
+    }
+    // Capital flight: above 45% threshold investment moves offshore
+    if (state.taxRate >= 45.0) {
+      final flightFactor = (state.taxRate - 45.0) / 15.0; // 0.0 at 45%, 1.0 at 60%
+      gdpGrowth -= flightFactor * 1.5;     // up to −1.5%/yr additional drag
+      stability -= flightFactor * 0.5;     // political destabilization
+      unemployment += flightFactor * 0.2;  // jobs leave with capital
     }
 
     // Building bonuses (yearly, per level owned)
@@ -329,9 +337,20 @@ class SimulationEngine {
         return s.copyWith(troopCount: (s.troopCount + delta).clamp(0, 10000));
       case 'Military Readiness':
         return s.copyWith(militaryReadiness: (s.militaryReadiness + delta).clamp(0, 100));
+      case 'Tax Rate':
+        return s.copyWith(taxRate: (s.taxRate + delta).clamp(5.0, 60.0));
       default:
         return s;
     }
+  }
+
+  // Returns a forced (non-random) event if current game conditions demand it.
+  // These override the normal random event schedule.
+  static EventModel? getForcedEvent(GameStateModel state) {
+    if (state.taxRate >= 45.0 && state.happiness < 40.0) {
+      return EventsData.taxProtestEvent(state.taxRate);
+    }
+    return null;
   }
 
   static String getApprovalLabel(double approval) {

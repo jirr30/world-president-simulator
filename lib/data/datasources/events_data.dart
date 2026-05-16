@@ -412,4 +412,47 @@ class EventsData {
     eligible.shuffle();
     return eligible.take(count).toList();
   }
+
+  // Forced event: tax rate ≥ 45% AND happiness < 40
+  static EventModel taxProtestEvent(double taxRate) => EventModel(
+    id: 'tax_protest',
+    emoji: '✊',
+    title: 'Mass Tax Protests',
+    description:
+        'With the tax rate at ${taxRate.toStringAsFixed(0)}% and public morale at rock bottom, '
+        'hundreds of thousands have taken to the streets demanding immediate relief. '
+        'The international community is watching. How will you respond?',
+    severity: EventSeverity.critical,
+    choices: [
+      EventChoice(
+        label: 'Emergency Tax Cut',
+        description: 'Slash the tax rate by 15 points immediately to restore public calm.',
+        effects: [
+          StatEffect('Tax Rate', -15.0),
+          StatEffect('Happiness', 12.0),
+          StatEffect('Approval', 10.0),
+          StatEffect('GDP Growth', 1.5),
+        ],
+      ),
+      EventChoice(
+        label: 'Gradual Reform',
+        description: 'Promise a phased tax reduction plan over the next two years.',
+        effects: [
+          StatEffect('Happiness', 5.0),
+          StatEffect('Approval', 3.0),
+          StatEffect('Stability', -2.0),
+        ],
+      ),
+      EventChoice(
+        label: 'Crack Down',
+        description: 'Deploy police to disperse protests and maintain order.',
+        effects: [
+          StatEffect('Stability', 3.0),
+          StatEffect('Happiness', -10.0),
+          StatEffect('Approval', -12.0),
+          StatEffect('Diplomatic Rep', -6.0),
+        ],
+      ),
+    ],
+  );
 }
