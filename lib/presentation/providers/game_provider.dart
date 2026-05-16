@@ -77,6 +77,20 @@ class GameNotifier extends StateNotifier<GameStateModel?> {
     GameSaveService.save(state!);
   }
 
+  void setHealthcareBudget(double budget) {
+    if (state == null) return;
+    final max = state!.gdpBillion * 0.08;
+    state = state!.copyWith(healthcareBudget: budget.clamp(0.0, max));
+    GameSaveService.save(state!);
+  }
+
+  void setEducationBudget(double budget) {
+    if (state == null) return;
+    final max = state!.gdpBillion * 0.08;
+    state = state!.copyWith(educationBudget: budget.clamp(0.0, max));
+    GameSaveService.save(state!);
+  }
+
   void removePolicy(String policyId) {
     if (state == null) return;
     state = SimulationEngine.removePolicy(state!, policyId);

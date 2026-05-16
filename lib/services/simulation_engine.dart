@@ -186,6 +186,18 @@ class SimulationEngine {
     education += blv('research_center') * 0.4;
     gdpGrowth += blv('research_center') * 0.1;
 
+    // Healthcare & education budget investment (extra spending above baseline)
+    if (state.healthcareBudget > 0) {
+      final hPct = state.healthcareBudget / state.gdpBillion.clamp(1.0, double.infinity) * 100;
+      healthcare += hPct * 0.5;
+      happiness += hPct * 0.08;
+    }
+    if (state.educationBudget > 0) {
+      final ePct = state.educationBudget / state.gdpBillion.clamp(1.0, double.infinity) * 100;
+      education += ePct * 0.5;
+      corruption -= ePct * 0.05;
+    }
+
     // Literacy slowly converges toward education index (long-term social metric)
     literacy += (education - literacy) * 0.05;
 
@@ -221,7 +233,7 @@ class SimulationEngine {
       final lvl = state.buildingLevels[b.id] ?? 0;
       if (lvl > 0) buildingMaintenance += lvl * b.moneyCostPerLevel * 0.02;
     }
-    final netBudget = taxIncome - baseGovSpending - state.militaryBudget - policySpending - buildingMaintenance;
+    final netBudget = taxIncome - baseGovSpending - state.militaryBudget - state.healthcareBudget - state.educationBudget - policySpending - buildingMaintenance;
     double treasury = state.treasury + netBudget;
 
     // Deficit penalties

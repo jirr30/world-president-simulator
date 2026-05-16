@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/events_data.dart';
 import '../../providers/game_provider.dart';
 import '../../widgets/common/country_flag.dart';
@@ -78,11 +79,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onPressed: () => _confirmLeave(context),
             ),
             actions: [
-              const Padding(
-                padding: EdgeInsets.only(right: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
                 child: Tooltip(
-                  message: 'Progress auto-saved',
-                  child: Icon(Icons.save_rounded, size: 16, color: AppColors.textMuted),
+                  message: context.l10n.progressAutoSaved,
+                  child: const Icon(Icons.save_rounded, size: 16, color: AppColors.textMuted),
                 ),
               ),
               Padding(
@@ -90,9 +91,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 child: TextButton.icon(
                   onPressed: () => context.go('/policies'),
                   icon: const Icon(Icons.policy_rounded, size: 18, color: AppColors.accent),
-                  label: const Text(
-                    'Policies',
-                    style: TextStyle(color: AppColors.accent, fontFamily: 'Poppins', fontSize: 13),
+                  label: Text(
+                    context.l10n.policies,
+                    style: const TextStyle(color: AppColors.accent, fontFamily: 'Poppins', fontSize: 13),
                   ),
                 ),
               ),
@@ -104,12 +105,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               controller: _tabs,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
-              tabs: const [
-                Tab(text: 'Overview'),
-                Tab(text: 'Economy'),
-                Tab(text: 'Military'),
-                Tab(text: 'Diplomacy'),
-                Tab(text: 'Social'),
+              tabs: [
+                Tab(text: context.l10n.tabOverview),
+                Tab(text: context.l10n.tabEconomy),
+                Tab(text: context.l10n.tabMilitary),
+                Tab(text: context.l10n.tabDiplomacy),
+                Tab(text: context.l10n.tabSocial),
               ],
             ),
           ),
@@ -130,7 +131,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         backgroundColor: AppColors.accent,
         icon: const Icon(Icons.skip_next_rounded, color: AppColors.background),
         label: Text(
-          'Advance to ${game.currentYear + 1}',
+          context.l10n.advanceToYear(game.currentYear + 1),
           style: const TextStyle(
             color: AppColors.background,
             fontFamily: 'Poppins',
@@ -147,18 +148,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Leave Game?',
-          style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
+        title: Text(
+          context.l10n.leaveGameTitle,
+          style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins'),
         ),
-        content: const Text(
-          'Game is auto-saved. You can continue from the main menu.',
-          style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins'),
+        content: Text(
+          context.l10n.leaveGameContent,
+          style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -166,7 +167,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               context.go('/home');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Leave'),
+            child: Text(context.l10n.leave),
           ),
         ],
       ),
@@ -214,7 +215,7 @@ class _DashboardHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${game.leaderTitle} • Year ${game.currentYear} • Term ${game.yearsInOffice}/${game.termDurationYears}',
+                  context.l10n.leaderInfo(game.leaderTitle as String, game.currentYear as int, game.yearsInOffice as int, game.termDurationYears as int),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
@@ -242,7 +243,7 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                'Approval',
+                context.l10n.approval,
                 style: TextStyle(
                   color: approvalColor.withValues(alpha: 0.7),
                   fontSize: 9,

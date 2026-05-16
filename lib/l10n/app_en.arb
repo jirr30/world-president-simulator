@@ -1,0 +1,1471 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "World President Simulator",
+  "@appTitle": { "description": "Application title" },
+
+  "appTitleLine1": "WORLD PRESIDENT",
+  "@appTitleLine1": { "description": "Splash screen line 1" },
+
+  "appTitleLine2": "SIMULATOR",
+  "@appTitleLine2": { "description": "Splash screen line 2" },
+
+  "appTagline1": "World President\nSimulator",
+  "@appTagline1": { "description": "Home screen branding title" },
+
+  "appTagline2": "Lead any of 100+ real nations.\nShape history. Leave a legacy.",
+  "@appTagline2": { "description": "Home screen branding subtitle" },
+
+  "featureCountries": "195 Countries",
+  "@featureCountries": {},
+
+  "featureRealData": "Real Data",
+  "@featureRealData": {},
+
+  "featureLiveEvents": "Live Events",
+  "@featureLiveEvents": {},
+
+  "featureAutoSave": "Auto-Save",
+  "@featureAutoSave": {},
+
+  "continueGame": "Continue Game",
+  "@continueGame": {},
+
+  "newGame": "New Game",
+  "@newGame": {},
+
+  "howToPlay": "How to Play",
+  "@howToPlay": {},
+
+  "savedGameFound": "Saved game found",
+  "@savedGameFound": {},
+
+  "startNewGameTitle": "Start New Game?",
+  "@startNewGameTitle": {},
+
+  "startNewGameContent": "Your saved progress will be overwritten when you start a new game.",
+  "@startNewGameContent": {},
+
+  "howToPlay1Title": "Choose Your Country",
+  "@howToPlay1Title": {},
+
+  "howToPlay1Desc": "Pick from 195 real nations with actual economic and military data.",
+  "@howToPlay1Desc": {},
+
+  "howToPlay2Title": "Apply Policies",
+  "@howToPlay2Title": {},
+
+  "howToPlay2Desc": "Choose economic, military, social, or diplomatic policies each term.",
+  "@howToPlay2Desc": {},
+
+  "howToPlay3Title": "Handle Events",
+  "@howToPlay3Title": {},
+
+  "howToPlay3Desc": "Random world events will challenge your leadership. Choose wisely.",
+  "@howToPlay3Desc": {},
+
+  "howToPlay4Title": "Advance Year",
+  "@howToPlay4Title": {},
+
+  "howToPlay4Desc": "Each year your decisions affect your approval rating and country stats.",
+  "@howToPlay4Desc": {},
+
+  "howToPlay5Title": "Auto-Save",
+  "@howToPlay5Title": {},
+
+  "howToPlay5Desc": "Progress is saved automatically. Leave and continue anytime.",
+  "@howToPlay5Desc": {},
+
+  "howToPlay6Title": "Leave a Legacy",
+  "@howToPlay6Title": {},
+
+  "howToPlay6Desc": "Survive your full term and be judged by history after 5 years.",
+  "@howToPlay6Desc": {},
+
+  "progressAutoSaved": "Progress auto-saved",
+  "@progressAutoSaved": {},
+
+  "policies": "Policies",
+  "@policies": {},
+
+  "tabOverview": "Overview",
+  "@tabOverview": {},
+
+  "tabEconomy": "Economy",
+  "@tabEconomy": {},
+
+  "tabMilitary": "Military",
+  "@tabMilitary": {},
+
+  "tabDiplomacy": "Diplomacy",
+  "@tabDiplomacy": {},
+
+  "tabSocial": "Social",
+  "@tabSocial": {},
+
+  "advanceToYear": "Advance to {year}",
+  "@advanceToYear": {
+    "placeholders": { "year": { "type": "int" } }
+  },
+
+  "leaveGameTitle": "Leave Game?",
+  "@leaveGameTitle": {},
+
+  "leaveGameContent": "Game is auto-saved. You can continue from the main menu.",
+  "@leaveGameContent": {},
+
+  "cancel": "Cancel",
+  "@cancel": {},
+
+  "leave": "Leave",
+  "@leave": {},
+
+  "approval": "Approval",
+  "@approval": {},
+
+  "leaderInfo": "{title} • Year {year} • Term {yearsIn}/{termDuration}",
+  "@leaderInfo": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "year": { "type": "int" },
+      "yearsIn": { "type": "int" },
+      "termDuration": { "type": "int" }
+    }
+  },
+
+  "statHappiness": "Happiness",
+  "@statHappiness": {},
+
+  "statStability": "Stability",
+  "@statStability": {},
+
+  "statGdpGrowth": "GDP Growth",
+  "@statGdpGrowth": {},
+
+  "statCorruption": "Corruption",
+  "@statCorruption": {},
+
+  "gdpStatusBooming": "Booming",
+  "@gdpStatusBooming": {},
+
+  "gdpStatusStable": "Stable",
+  "@gdpStatusStable": {},
+
+  "gdpStatusRecession": "Recession",
+  "@gdpStatusRecession": {},
+
+  "statGdp": "GDP",
+  "@statGdp": {},
+
+  "diplomaticRelations": "Diplomatic Relations",
+  "@diplomaticRelations": {},
+
+  "allies": "Allies",
+  "@allies": {},
+
+  "rivals": "Rivals",
+  "@rivals": {},
+
+  "activePolicies": "Active Policies",
+  "@activePolicies": {},
+
+  "activePoliciesCount": "Active Policies ({count})",
+  "@activePoliciesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "atWarBadge": "AT WAR",
+  "@atWarBadge": {},
+
+  "population": "Population",
+  "@population": {},
+
+  "yearsLeft": "{n}yr left",
+  "@yearsLeft": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+
+  "economicIndicators": "Economic Indicators",
+  "@economicIndicators": {},
+
+  "totalGdp": "Total GDP",
+  "@totalGdp": {},
+
+  "gdpPerCapita": "GDP per Capita",
+  "@gdpPerCapita": {},
+
+  "inflation": "Inflation",
+  "@inflation": {},
+
+  "unemployment": "Unemployment",
+  "@unemployment": {},
+
+  "taxRate": "Tax Rate",
+  "@taxRate": {},
+
+  "nationalDebt": "National Debt",
+  "@nationalDebt": {},
+
+  "taxRateSliderTitle": "Tax Rate",
+  "@taxRateSliderTitle": {},
+
+  "taxZoneSafe": "Safe Zone",
+  "@taxZoneSafe": {},
+
+  "taxZoneWarning": "Warning Zone",
+  "@taxZoneWarning": {},
+
+  "taxZoneDanger": "Danger Zone",
+  "@taxZoneDanger": {},
+
+  "capitalFlightWarning": "Capital Flight Risk",
+  "@capitalFlightWarning": {},
+
+  "taxProtestImminent": "Tax Protest Imminent",
+  "@taxProtestImminent": {},
+
+  "treasury": "Treasury",
+  "@treasury": {},
+
+  "treasuryBalance": "Current Balance",
+  "@treasuryBalance": {},
+
+  "budgetBreakdown": "BUDGET BREAKDOWN",
+  "@budgetBreakdown": {},
+
+  "taxRevenue": "Tax Revenue",
+  "@taxRevenue": {},
+
+  "govSpending": "Government Spending",
+  "@govSpending": {},
+
+  "govSpendingSub": "20% of GDP",
+  "@govSpendingSub": {},
+
+  "militaryBudgetLabel": "Military Budget",
+  "@militaryBudgetLabel": {},
+
+  "healthcareLabel": "Healthcare",
+  "@healthcareLabel": {},
+
+  "educationLabel": "Education",
+  "@educationLabel": {},
+
+  "buildingMaintenance": "Building Maintenance",
+  "@buildingMaintenance": {},
+
+  "buildingMaintenanceSub": "2%/lvl/year",
+  "@buildingMaintenanceSub": {},
+
+  "activePoliciesCost": "combined annual cost",
+  "@activePoliciesCost": {},
+
+  "netPerYear": "Net per year",
+  "@netPerYear": {},
+
+  "treasuryDeficit": "Treasury deficit — GDP growth and happiness penalized",
+  "@treasuryDeficit": {},
+
+  "militaryStrength": "Military Strength",
+  "@militaryStrength": {},
+
+  "militaryBudget": "Military Budget",
+  "@militaryBudget": {},
+
+  "activeTroops": "Active Troops",
+  "@activeTroops": {},
+
+  "readiness": "Readiness",
+  "@readiness": {},
+
+  "warStatus": "War Status",
+  "@warStatus": {},
+
+  "atWar": "At War",
+  "@atWar": {},
+
+  "atPeace": "At Peace",
+  "@atPeace": {},
+
+  "declareWar": "Declare War",
+  "@declareWar": {},
+
+  "sueForPeace": "Sue for Peace",
+  "@sueForPeace": {},
+
+  "warControls": "War Controls",
+  "@warControls": {},
+
+  "militaryRank": "Military Rank",
+  "@militaryRank": {},
+
+  "strategicResources": "Strategic Resources",
+  "@strategicResources": {},
+
+  "educationIndex": "Education Index",
+  "@educationIndex": {},
+
+  "literacyRate": "Literacy Rate",
+  "@literacyRate": {},
+
+  "foodSecurity": "Food Security",
+  "@foodSecurity": {},
+
+  "agriOutput": "Agri. Output",
+  "@agriOutput": {},
+
+  "socialInvestment": "Social Investment",
+  "@socialInvestment": {},
+
+  "socialInvestmentSub": "Extra funding on top of base government spending",
+  "@socialInvestmentSub": {},
+
+  "none": "None",
+  "@none": {},
+
+  "foodAgricultureStatus": "Food & Agriculture Status",
+  "@foodAgricultureStatus": {},
+
+  "foodSurplus": "Food Surplus",
+  "@foodSurplus": {},
+
+  "foodSecure": "Food Secure",
+  "@foodSecure": {},
+
+  "moderateRisk": "Moderate Risk",
+  "@moderateRisk": {},
+
+  "foodInsecure": "Food Insecure",
+  "@foodInsecure": {},
+
+  "famineCrisis": "Famine Crisis",
+  "@famineCrisis": {},
+
+  "populationOverview": "Population Overview",
+  "@populationOverview": {},
+
+  "totalPopulation": "Total Population",
+  "@totalPopulation": {},
+
+  "growthRate": "Growth Rate",
+  "@growthRate": {},
+
+  "capitalCity": "Capital City",
+  "@capitalCity": {},
+
+  "continent": "Continent",
+  "@continent": {},
+
+  "government": "Government",
+  "@government": {},
+
+  "happinessScore": "Happiness Score",
+  "@happinessScore": {},
+
+  "chooseYourResponse": "Choose Your Response:",
+  "@chooseYourResponse": {},
+
+  "confirmDecision": "Confirm Decision",
+  "@confirmDecision": {},
+
+  "selectOptionFirst": "Select an option first",
+  "@selectOptionFirst": {},
+
+  "continueGoverning": "Continue Governing",
+  "@continueGoverning": {},
+
+  "impeachedBadge": "IMPEACHED",
+  "@impeachedBadge": {},
+
+  "termEndedBadge": "TERM ENDED",
+  "@termEndedBadge": {},
+
+  "removedFromPower": "Removed from Power",
+  "@removedFromPower": {},
+
+  "finalReport": "Final Report",
+  "@finalReport": {},
+
+  "avgApproval": "Avg Approval",
+  "@avgApproval": {},
+
+  "avgApprovalStat": "Avg. approval: {pct}%",
+  "@avgApprovalStat": {
+    "placeholders": { "pct": { "type": "String" } }
+  },
+
+  "finalGdp": "Final GDP",
+  "@finalGdp": {},
+
+  "militaryStat": "Military",
+  "@militaryStat": {},
+
+  "diplomacy": "Diplomacy",
+  "@diplomacy": {},
+
+  "education": "Education",
+  "@education": {},
+
+  "policiesApplied": "Policies Applied",
+  "@policiesApplied": {},
+
+  "yearsInPower": "Years in Power",
+  "@yearsInPower": {},
+
+  "historicalVerdict": "Historical Verdict",
+  "@historicalVerdict": {},
+
+  "playAgain": "Play Again",
+  "@playAgain": {},
+
+  "mainMenu": "Main Menu",
+  "@mainMenu": {},
+
+  "verdictGreat": "History will remember your leadership with great admiration. You transformed {country} into a beacon of prosperity and stability.",
+  "@verdictGreat": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "verdictGood": "You led {country} competently and are well-regarded by your citizens. Your tenure saw genuine progress in key areas.",
+  "@verdictGood": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "verdictAverage": "Your time as leader of {country} was mixed. While you maintained stability, many citizens felt more could have been accomplished.",
+  "@verdictAverage": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "verdictPoor": "Your leadership divided the nation. Significant opposition marked your term. {country} faced considerable challenges under your governance.",
+  "@verdictPoor": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "verdictBad": "Your term as leader of {country} will be remembered as a turbulent period. Institutions weakened and the country''s reputation declined.",
+  "@verdictBad": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "impeachText1": "With approval at a catastrophic low, the people of {country} took to the streets. Parliament voted unanimously to remove you. You will be remembered as the worst leader in the nation''s history.",
+  "@impeachText1": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "impeachText2": "Mass protests and a parliamentary vote forced you out of office. Your policies failed the people of {country} and history will not be kind to your legacy.",
+  "@impeachText2": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "impeachText3": "Public trust collapsed beyond recovery. Facing impeachment proceedings in parliament, you were removed from office. {country} moves forward without you.",
+  "@impeachText3": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "selectCountry": "Select Your Country",
+  "@selectCountry": {},
+
+  "searchCountries": "Search countries...",
+  "@searchCountries": {},
+
+  "filterAll": "All",
+  "@filterAll": {},
+
+  "filterAfrica": "Africa",
+  "@filterAfrica": {},
+
+  "filterAsia": "Asia",
+  "@filterAsia": {},
+
+  "filterEurope": "Europe",
+  "@filterEurope": {},
+
+  "filterAmericas": "Americas",
+  "@filterAmericas": {},
+
+  "filterOceania": "Oceania",
+  "@filterOceania": {},
+
+  "startGame": "Start Game",
+  "@startGame": {},
+
+  "countryGdp": "GDP",
+  "@countryGdp": {},
+
+  "countryPopulation": "Population",
+  "@countryPopulation": {},
+
+  "countryMilitary": "Military",
+  "@countryMilitary": {},
+
+  "countryHdi": "HDI",
+  "@countryHdi": {},
+
+  "countryContinent": "Continent",
+  "@countryContinent": {},
+
+  "countryCapital": "Capital",
+  "@countryCapital": {},
+
+  "countryGovernment": "Government",
+  "@countryGovernment": {},
+
+  "policyScreen": "Policies",
+  "@policyScreen": {},
+
+  "applyPolicy": "Apply",
+  "@applyPolicy": {},
+
+  "removePolicy": "Remove",
+  "@removePolicy": {},
+
+  "policyActive": "Active",
+  "@policyActive": {},
+
+  "policyCost": "Cost",
+  "@policyCost": {},
+
+  "policyEffect": "Effects",
+  "@policyEffect": {},
+
+  "buildingsScreen": "Infrastructure",
+  "@buildingsScreen": {},
+
+  "build": "Build",
+  "@build": {},
+
+  "upgrade": "Upgrade",
+  "@upgrade": {},
+
+  "levelLabel": "Level {level}",
+  "@levelLabel": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+
+  "maxLevel": "Max Level",
+  "@maxLevel": {},
+
+  "natResources": "Nat. Resources",
+  "@natResources": {},
+
+  "oilReserves": "Oil Reserves",
+  "@oilReserves": {},
+
+  "diplomaticReputation": "Diplomatic Rep.",
+  "@diplomaticReputation": {},
+
+  "formAlliance": "Form Alliance",
+  "@formAlliance": {},
+
+  "breakAlliance": "Break Alliance",
+  "@breakAlliance": {},
+
+  "imposeSanction": "Impose Sanction",
+  "@imposeSanction": {},
+
+  "liftSanction": "Lift Sanction",
+  "@liftSanction": {},
+
+  "allyRelation": "Allied",
+  "@allyRelation": {},
+
+  "historicAlly": "Historic Ally",
+  "@historicAlly": {},
+
+  "neutral": "Neutral",
+  "@neutral": {},
+
+  "sanctioned": "Sanctioned",
+  "@sanctioned": {},
+
+  "historicRival": "Historic Rival",
+  "@historicRival": {},
+
+  "yearSummary": "Year in Review",
+  "@yearSummary": {},
+
+  "yearSummarySubtitle": "Year {year} Results",
+  "@yearSummarySubtitle": {
+    "placeholders": { "year": { "type": "int" } }
+  },
+
+  "noChanges": "No significant changes this year.",
+  "@noChanges": {},
+
+  "continueBtn": "Continue",
+  "@continueBtn": {},
+
+  "termEndingSoon": "Term ending soon",
+  "@termEndingSoon": {},
+
+  "yearsRemaining": "{n} year remaining",
+  "@yearsRemaining": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+
+  "politicalCapital": "Political Capital",
+  "@politicalCapital": {},
+
+  "languageLabel": "Language",
+  "@languageLabel": {},
+
+  "langEnglish": "English",
+  "@langEnglish": {},
+
+  "langIndonesian": "Indonesia",
+  "@langIndonesian": {},
+
+  "settings": "Settings",
+  "@settings": {},
+
+  "pageNotFound": "Page not found: {path}",
+  "@pageNotFound": {
+    "placeholders": { "path": { "type": "String" } }
+  },
+
+  "goHome": "Go Home",
+  "@goHome": {},
+
+  "ultraLowTaxRate": "Ultra Low — private sector surge",
+  "@ultraLowTaxRate": {},
+
+  "veryLowTaxRate": "Very Low — minimal public services",
+  "@veryLowTaxRate": {},
+
+  "lowTaxRate": "Low — lean government",
+  "@lowTaxRate": {},
+
+  "moderateTaxRate": "Moderate — balanced budget",
+  "@moderateTaxRate": {},
+
+  "highTaxRate": "High — strong public investment",
+  "@highTaxRate": {},
+
+  "veryHighTaxRate": "Very High — risk of capital flight",
+  "@veryHighTaxRate": {},
+
+  "extremeTaxRate": "Extreme — capital flight + protest risk",
+  "@extremeTaxRate": {},
+
+  "protestConditionsActive": "PROTEST CONDITIONS ACTIVE — Mass protests will erupt next year. Lower tax below 45% or raise happiness above 40 to prevent them.",
+  "@protestConditionsActive": {},
+
+  "capitalFlightActive": "Capital flight active — investors are leaving. If happiness falls below 40, mass protests will erupt.",
+  "@capitalFlightActive": {},
+
+  "newRateTakesEffect": "New rate {taxRate}% takes full effect next year.",
+  "@newRateTakesEffect": {
+    "placeholders": { "taxRate": { "type": "String" } }
+  },
+
+  "taxZoneSafeLabel": "Safe",
+  "@taxZoneSafeLabel": {},
+
+  "taxZoneWarningLabel": "Warning",
+  "@taxZoneWarningLabel": {},
+
+  "taxZoneCrisisLabel": "Crisis",
+  "@taxZoneCrisisLabel": {},
+
+  "healthyDebt": "Healthy debt level — economy is sustainable.",
+  "@healthyDebt": {},
+
+  "moderateDebt": "Moderate debt — monitor carefully.",
+  "@moderateDebt": {},
+
+  "dangerousDebt": "Dangerous debt level — risk of default!",
+  "@dangerousDebt": {},
+
+  "declareWarTitle": "Declare War?",
+  "@declareWarTitle": {},
+
+  "declareWarSubtitle": "This will put your country on a war footing.",
+  "@declareWarSubtitle": {},
+
+  "ongoingWarPenalties": "Ongoing war penalties (per year):",
+  "@ongoingWarPenalties": {},
+
+  "militaryWeakWarning": "Military critically weak — peace negotiations will be forced at end of year.",
+  "@militaryWeakWarning": {},
+
+  "countryAtPeace": "Your country is currently at peace.",
+  "@countryAtPeace": {},
+
+  "declareWarWarning": "Declaring war will impose severe annual penalties on happiness, stability, and GDP growth until peace is negotiated.",
+  "@declareWarWarning": {},
+
+  "sueForPeaceTitle": "Sue for Peace?",
+  "@sueForPeaceTitle": {},
+
+  "sueForPeaceSubtitle": "End the conflict and return to peacetime.",
+  "@sueForPeaceSubtitle": {},
+
+  "activeConflict": "Active Conflict",
+  "@activeConflict": {},
+
+  "percentOfGdp": "% of GDP",
+  "@percentOfGdp": {},
+
+  "minimalMilBudget": "Minimal — defense capability degrading",
+  "@minimalMilBudget": {},
+
+  "lowMilBudget": "Low — basic deterrence only",
+  "@lowMilBudget": {},
+
+  "moderateMilBudget": "Moderate — balanced defense",
+  "@moderateMilBudget": {},
+
+  "highMilBudget": "High — strong regional power",
+  "@highMilBudget": {},
+
+  "veryHighMilBudget": "Very High — major military investment",
+  "@veryHighMilBudget": {},
+
+  "maxMilBudget": "Maximum — full military-industrial complex",
+  "@maxMilBudget": {},
+
+  "newBudgetTakesEffect": "New budget {percent}% GDP ({budget}) takes effect next year.",
+  "@newBudgetTakesEffect": {
+    "placeholders": {
+      "percent": { "type": "String" },
+      "budget": { "type": "String" }
+    }
+  },
+
+  "globalSuperpower": "Global Superpower",
+  "@globalSuperpower": {},
+
+  "majorMilitaryPower": "Major Military Power",
+  "@majorMilitaryPower": {},
+
+  "regionalPower": "Regional Power",
+  "@regionalPower": {},
+
+  "moderateForce": "Moderate Force",
+  "@moderateForce": {},
+
+  "limitedCapability": "Limited Capability",
+  "@limitedCapability": {},
+
+  "minimalDefense": "Minimal Defense",
+  "@minimalDefense": {},
+
+  "noCountriesMatch": "No countries match your search.",
+  "@noCountriesMatch": {},
+
+  "repLocked": "Rep < 30 — alliances locked.\nImprove reputation to unlock.",
+  "@repLocked": {},
+
+  "yourAlliances": "Your Alliances",
+  "@yourAlliances": {},
+
+  "yourSanctions": "Your Sanctions",
+  "@yourSanctions": {},
+
+  "historicAllies": "Historic Allies",
+  "@historicAllies": {},
+
+  "historicRivals": "Historic Rivals",
+  "@historicRivals": {},
+
+  "noActiveRelations": "No active relations.\nUse the browser →\nto form alliances.",
+  "@noActiveRelations": {},
+
+  "preExisting": "Pre-existing",
+  "@preExisting": {},
+
+  "alliancesCount": "{count} Allies",
+  "@alliancesCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "rivalsCount": "{count} Rivals",
+  "@rivalsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "allianceGdpBonus": "+{bonus}% GDP/yr from alliances",
+  "@allianceGdpBonus": {
+    "placeholders": { "bonus": { "type": "String" } }
+  },
+
+  "confirmFormAlliance": "Form Alliance with {country}?",
+  "@confirmFormAlliance": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "confirmBreakAlliance": "Break Alliance with {country}?",
+  "@confirmBreakAlliance": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "confirmSanction": "Impose Sanctions on {country}?",
+  "@confirmSanction": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "confirmLiftSanction": "Lift Sanctions on {country}?",
+  "@confirmLiftSanction": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "economicTab": "Economic",
+  "@economicTab": {},
+
+  "diplomaticTab": "Diplomatic",
+  "@diplomaticTab": {},
+
+  "policyNotEnoughCapital": "Not enough Political Capital (need {needed}, have {have}).",
+  "@policyNotEnoughCapital": {
+    "placeholders": {
+      "needed": { "type": "int" },
+      "have": { "type": "int" }
+    }
+  },
+
+  "notEnoughApproval": "You need at least {minApproval}% approval to apply this policy.",
+  "@notEnoughApproval": {
+    "placeholders": { "minApproval": { "type": "int" } }
+  },
+
+  "policyAlreadyActive": "{policy} is already active.",
+  "@policyAlreadyActive": {
+    "placeholders": { "policy": { "type": "String" } }
+  },
+
+  "policyApplied": "{policy} has been applied!",
+  "@policyApplied": {
+    "placeholders": { "policy": { "type": "String" } }
+  },
+
+  "revokePolicy": "Revoke \"{policy}\"?",
+  "@revokePolicy": {
+    "placeholders": { "policy": { "type": "String" } }
+  },
+
+  "revokeDescription": "Revoking this policy will:",
+  "@revokeDescription": {},
+
+  "revokeCostDrain": "Stop the annual cost drain",
+  "@revokeCostDrain": {},
+
+  "revokeEffectsReversal": "Partially reverse effects (40%)",
+  "@revokeEffectsReversal": {},
+
+  "revokeRefund": "Refund {refund} Political Capital",
+  "@revokeRefund": {
+    "placeholders": { "refund": { "type": "int" } }
+  },
+
+  "revokePolicyButton": "Revoke Policy",
+  "@revokePolicyButton": {},
+
+  "revokeSuccess": "{policy} revoked. +{refund} refunded.",
+  "@revokeSuccess": {
+    "placeholders": {
+      "policy": { "type": "String" },
+      "refund": { "type": "int" }
+    }
+  },
+
+  "bonusPerLevel": "Bonus per level / year:",
+  "@bonusPerLevel": {},
+
+  "infrastructureTitle": "Infrastructure",
+  "@infrastructureTitle": {},
+
+  "energyTab": "Energy",
+  "@energyTab": {},
+
+  "foodTab": "Food",
+  "@foodTab": {},
+
+  "resourcesTab": "Resources",
+  "@resourcesTab": {},
+
+  "powerGrid": "Power Grid",
+  "@powerGrid": {},
+
+  "noPowerCapacity": "No power capacity! Go to the Energy tab and build a power plant first — all other buildings require electricity.",
+  "@noPowerCapacity": {},
+
+  "noEnergyWarning": "Not enough energy (need {needed} MW, only {available} MW free). Build more power plants!",
+  "@noEnergyWarning": {
+    "placeholders": {
+      "needed": { "type": "int" },
+      "available": { "type": "int" }
+    }
+  },
+
+  "buildingNotEnoughCapital": "Not enough Political Capital (need {need}, have {have}).",
+  "@buildingNotEnoughCapital": {
+    "placeholders": {
+      "need": { "type": "int" },
+      "have": { "type": "int" }
+    }
+  },
+
+  "notEnoughTreasury": "Not enough Treasury (need ${needed}B, have ${have}B). Wait for annual income!",
+  "@notEnoughTreasury": {
+    "placeholders": {
+      "needed": { "type": "String" },
+      "have": { "type": "String" }
+    }
+  },
+
+  "buildingBuilt": "{building} built!",
+  "@buildingBuilt": {
+    "placeholders": { "building": { "type": "String" } }
+  },
+
+  "buildingUpgraded": "{building} upgraded to Level {level}!",
+  "@buildingUpgraded": {
+    "placeholders": {
+      "building": { "type": "String" },
+      "level": { "type": "int" }
+    }
+  },
+
+  "countriesFound": "{count} countries found",
+  "@countriesFound": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "hdi": "HDI",
+  "@hdi": {},
+
+  "corruptionIndex": "Corruption Index",
+  "@corruptionIndex": {},
+
+  "taxPolicyTitle": "Tax Policy",
+  "@taxPolicyTitle": {},
+
+  "baseGovSpending": "Base Gov. Spending",
+  "@baseGovSpending": {},
+
+  "revenueLabel": "Revenue",
+  "@revenueLabel": {},
+
+  "capitalFlightLabel": "Capital Flight",
+  "@capitalFlightLabel": {},
+
+  "needsCapitalToWar": "Need 💎{cost} political capital to declare war.",
+  "@needsCapitalToWar": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "warConflict": "War & Conflict",
+  "@warConflict": {},
+
+  "atWarStatus": "AT WAR",
+  "@atWarStatus": {},
+
+  "atPeaceStatus": "AT PEACE",
+  "@atPeaceStatus": {},
+
+  "currentlyAtPeace": "Your country is currently at peace.",
+  "@currentlyAtPeace": {},
+
+  "declaringWarWarning": "Declaring war will impose severe annual penalties on happiness, stability, and GDP growth until peace is negotiated.",
+  "@declaringWarWarning": {},
+
+  "militaryCriticallyWeak": "Military critically weak — peace negotiations will be forced at end of year.",
+  "@militaryCriticallyWeak": {},
+
+  "militaryClassification": "Military Classification",
+  "@militaryClassification": {},
+
+  "naturalResources": "Natural Resources",
+  "@naturalResources": {},
+
+  "oilEnergyReserves": "Oil & Energy Reserves",
+  "@oilEnergyReserves": {},
+
+  "milBudgetMinimal": "Minimal — defense capability degrading",
+  "@milBudgetMinimal": {},
+
+  "milBudgetLow": "Low — basic deterrence only",
+  "@milBudgetLow": {},
+
+  "milBudgetModerate": "Moderate — balanced defense",
+  "@milBudgetModerate": {},
+
+  "milBudgetHigh": "High — strong regional power",
+  "@milBudgetHigh": {},
+
+  "milBudgetVeryHigh": "Very High — major military investment",
+  "@milBudgetVeryHigh": {},
+
+  "milBudgetMaximum": "Maximum — full military-industrial complex",
+  "@milBudgetMaximum": {},
+
+  "strengthLabel": "Strength",
+  "@strengthLabel": {},
+
+  "troopsLabel": "Troops",
+  "@troopsLabel": {},
+
+  "diploRepLabel": "Diplo Rep",
+  "@diploRepLabel": {},
+
+  "nationalDebtPct": "{debt}% of GDP",
+  "@nationalDebtPct": {
+    "placeholders": { "debt": { "type": "String" } }
+  },
+
+  "alliedRelLabel": "Allied",
+  "@alliedRelLabel": {},
+
+  "diplomaticReputationTitle": "Diplomatic Reputation",
+  "@diplomaticReputationTitle": {},
+
+  "highlyRespected": "Highly Respected",
+  "@highlyRespected": {},
+
+  "wellRegarded": "Well-regarded",
+  "@wellRegarded": {},
+
+  "neutralStanding": "Neutral Standing",
+  "@neutralStanding": {},
+
+  "controversial": "Controversial",
+  "@controversial": {},
+
+  "pariahState": "Pariah State",
+  "@pariahState": {},
+
+  "searchNCountries": "Search {n} countries…",
+  "@searchNCountries": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+
+  "breakActionLabel": "Break",
+  "@breakActionLabel": {},
+
+  "liftActionLabel": "Lift",
+  "@liftActionLabel": {},
+
+  "allyActionLabel": "Ally",
+  "@allyActionLabel": {},
+
+  "sanctionActionLabel": "Sanction",
+  "@sanctionActionLabel": {},
+
+  "historicLabel": "Historic",
+  "@historicLabel": {},
+
+  "rivalLabel": "Rival",
+  "@rivalLabel": {},
+
+  "oneTimeCost": "ONE-TIME COST",
+  "@oneTimeCost": {},
+
+  "annualBenefits": "ANNUAL BENEFITS",
+  "@annualBenefits": {},
+
+  "effectsLabel": "EFFECTS",
+  "@effectsLabel": {},
+
+  "repTooLow": "Diplomatic reputation too low (need ≥30 to form alliances).",
+  "@repTooLow": {},
+
+  "notEnoughCapitalDiplo": "💎 Not enough Political Capital (need {cost}).",
+  "@notEnoughCapitalDiplo": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "allianceFormedMsg": "🤝 Alliance formed with {country}!",
+  "@allianceFormedMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "allianceEndedMsg": "✂️ Alliance with {country} ended.",
+  "@allianceEndedMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "sanctionsImposedMsg": "⚠️ Sanctions imposed on {country}.",
+  "@sanctionsImposedMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "sanctionsLiftedMsg": "✅ Sanctions on {country} lifted.",
+  "@sanctionsLiftedMsg": {
+    "placeholders": { "country": { "type": "String" } }
+  },
+
+  "allianceRepEffect": "+6 Diplomatic Reputation",
+  "@allianceRepEffect": {},
+
+  "allianceGdpYearEffect": "+0.4% GDP Growth per year",
+  "@allianceGdpYearEffect": {},
+
+  "allianceHappinessEffect": "+2 Happiness",
+  "@allianceHappinessEffect": {},
+
+  "allianceStabilityEffect": "+1.5 Stability per year",
+  "@allianceStabilityEffect": {},
+
+  "alliancePerAllyBonus": "+0.1% GDP/yr bonus per total ally",
+  "@alliancePerAllyBonus": {},
+
+  "breakRepEffect": "-8 Diplomatic Reputation",
+  "@breakRepEffect": {},
+
+  "breakGdpEffect": "-0.3% GDP Growth",
+  "@breakGdpEffect": {},
+
+  "breakGdpBonusEffect": "Lose ongoing alliance GDP bonus",
+  "@breakGdpBonusEffect": {},
+
+  "sanctionRepEffect": "-4 Diplomatic Reputation",
+  "@sanctionRepEffect": {},
+
+  "sanctionGdpEffect": "-0.05% GDP Growth per sanctioned country/yr",
+  "@sanctionGdpEffect": {},
+
+  "sanctionTradeEffect": "Stops ongoing trade benefits",
+  "@sanctionTradeEffect": {},
+
+  "liftRepEffect": "+3 Diplomatic Reputation",
+  "@liftRepEffect": {},
+
+  "liftGdpEffect": "Removes -0.05% GDP drag/yr",
+  "@liftGdpEffect": {},
+
+  "liftPathEffect": "Opens path to future alliance",
+  "@liftPathEffect": {},
+
+  "costLabel": "Cost",
+  "@costLabel": {},
+
+  "splashTitle": "WORLD PRESIDENT",
+  "@splashTitle": {},
+
+  "splashSubtitle": "SIMULATOR",
+  "@splashSubtitle": {},
+
+  "applyButton": "Apply",
+  "@applyButton": {},
+
+  "revokeButton": "Revoke",
+  "@revokeButton": {},
+
+  "needCapitalButton": "Need 💎{cost}",
+  "@needCapitalButton": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "searchHint": "Search...",
+  "@searchHint": {},
+
+  "continentLabel": "CONTINENT",
+  "@continentLabel": {},
+
+  "allRegions": "All Regions",
+  "@allRegions": {},
+
+  "leadNation": "Lead Nation",
+  "@leadNation": {},
+
+  "countryProfile": "Country Profile",
+  "@countryProfile": {},
+
+  "naturalAllies": "Natural Allies",
+  "@naturalAllies": {},
+
+  "noActiveGame": "No active game",
+  "@noActiveGame": {},
+
+  "noPower": "No Power",
+  "@noPower": {},
+
+  "mwUsed": "{consumption}/{capacity} MW used",
+  "@mwUsed": {
+    "placeholders": {
+      "consumption": { "type": "String" },
+      "capacity": { "type": "String" }
+    }
+  },
+
+  "mwFree": "({available} MW free)",
+  "@mwFree": {
+    "placeholders": { "available": { "type": "String" } }
+  },
+
+  "generatesEnergyPerLevel": "Generates +{mw} MW per level  •  Max {max} levels",
+  "@generatesEnergyPerLevel": {
+    "placeholders": {
+      "mw": { "type": "String" },
+      "max": { "type": "String" }
+    }
+  },
+
+  "requiresEnergyActive": "Requires {mw} MW to operate",
+  "@requiresEnergyActive": {
+    "placeholders": { "mw": { "type": "String" } }
+  },
+
+  "requiresEnergyInactive": "Requires {mw} MW to operate  •  not yet built",
+  "@requiresEnergyInactive": {
+    "placeholders": { "mw": { "type": "String" } }
+  },
+
+  "notBuiltLabel": "Not Built",
+  "@notBuiltLabel": {},
+
+  "levelProgress": "Lv {level} / {maxLevel}",
+  "@levelProgress": {
+    "placeholders": {
+      "level": { "type": "int" },
+      "maxLevel": { "type": "int" }
+    }
+  },
+
+  "upgradeToLevel": "Upgrade → Lv {level}",
+  "@upgradeToLevel": {
+    "placeholders": { "level": { "type": "int" } }
+  },
+
+  "needCapitalForBuilding": "💎 Need {cost}",
+  "@needCapitalForBuilding": {
+    "placeholders": { "cost": { "type": "int" } }
+  },
+
+  "needMoneyForBuilding": "🪙 Need ${cost}B",
+  "@needMoneyForBuilding": {
+    "placeholders": { "cost": { "type": "String" } }
+  },
+
+  "needEnergyForBuilding": "⚡ Need {mw} MW",
+  "@needEnergyForBuilding": {
+    "placeholders": { "mw": { "type": "String" } }
+  },
+
+  "impeachRisk": "IMPEACH RISK",
+  "@impeachRisk": {},
+
+  "lowApproval": "Low Approval",
+  "@lowApproval": {},
+
+  "happyLabel": "Happy",
+  "@happyLabel": {},
+
+  "stableLabel": "Stable",
+  "@stableLabel": {},
+
+  "termLabel": "Term",
+  "@termLabel": {},
+
+  "lastYear": "Last Year",
+  "@lastYear": {},
+
+  "statusLabel": "Status",
+  "@statusLabel": {},
+
+  "approvalCritical": "CRITICAL — Advance year to trigger impeachment!",
+  "@approvalCritical": {},
+
+  "approvalDangerouslyLow": "Approval dangerously low — impeached at 15%",
+  "@approvalDangerouslyLow": {},
+
+  "capitalLabel": "Capital",
+  "@capitalLabel": {},
+
+  "yourNation": "Your Nation",
+  "@yourNation": {},
+
+  "cannotBreakLabel": "Cannot break",
+  "@cannotBreakLabel": {},
+
+  "needRepLabel": "Need rep ≥30",
+  "@needRepLabel": {},
+
+  "fixedRelLabel": "Fixed",
+  "@fixedRelLabel": {},
+
+  "diplomacyHeader": "DIPLOMACY",
+  "@diplomacyHeader": {},
+
+  "dashboardLabel": "Dashboard",
+  "@dashboardLabel": {},
+
+  "economySection": "Economy",
+  "@economySection": {},
+
+  "societySection": "Society",
+  "@societySection": {},
+
+  "militaryDiplomacy": "Military & Diplomacy",
+  "@militaryDiplomacy": {},
+
+  "resourcesSection": "Resources",
+  "@resourcesSection": {},
+
+  "ratingLabel": "Rating",
+  "@ratingLabel": {},
+
+  "growthLabel": "Growth",
+  "@growthLabel": {},
+
+  "militaryStrLabel": "Military Str.",
+  "@militaryStrLabel": {},
+
+  "reputationLabel": "Reputation",
+  "@reputationLabel": {},
+
+  "treasuryBudgetTitle": "Treasury & Budget",
+  "@treasuryBudgetTitle": {},
+
+  "netPerYearBadge": "Net / year",
+  "@netPerYearBadge": {},
+
+  "govSpendingShort": "Gov. Spending",
+  "@govSpendingShort": {},
+
+  "maintenanceLabel": "Maintenance",
+  "@maintenanceLabel": {},
+
+  "netThisYear": "Net this year",
+  "@netThisYear": {},
+
+  "currentApprovalPct": "Current approval: {approval}%",
+  "@currentApprovalPct": {
+    "placeholders": { "approval": { "type": "String" } }
+  },
+
+  "approvalCriticalNote": "Approval critical — impeached if it drops below 15%",
+  "@approvalCriticalNote": {},
+
+  "advanceToYearTitle": "Advance to Year {year}",
+  "@advanceToYearTitle": {
+    "placeholders": { "year": { "type": "int" } }
+  },
+
+  "termYearOf": "Term year {year} of {total}",
+  "@termYearOf": {
+    "placeholders": {
+      "year": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "budgetProjection": "BUDGET PROJECTION",
+  "@budgetProjection": {},
+
+  "yearXSummary": "Year {year} Summary",
+  "@yearXSummary": {
+    "placeholders": { "year": { "type": "int" } }
+  },
+
+  "capitalEarned": "Political Capital earned: +{amount} 💎",
+  "@capitalEarned": {
+    "placeholders": { "amount": { "type": "int" } }
+  },
+
+  "statChanges": "STAT CHANGES",
+  "@statChanges": {},
+
+  "criticalImpeachImminent": "CRITICAL: Impeachment imminent if approval drops below 15%!",
+  "@criticalImpeachImminent": {},
+
+  "warningApprovalAction": "Warning: Approval at {approval}% — take action before next year.",
+  "@warningApprovalAction": {
+    "placeholders": { "approval": { "type": "String" } }
+  },
+
+  "literacyLabel": "Literacy",
+  "@literacyLabel": {},
+
+  "milReadinessLabel": "Mil. Readiness",
+  "@milReadinessLabel": {},
+
+  "govDemocracy": "Democracy",
+  "@govDemocracy": {},
+
+  "govRepublic": "Republic",
+  "@govRepublic": {},
+
+  "govConstMonarchy": "Const. Monarchy",
+  "@govConstMonarchy": {},
+
+  "govMonarchy": "Monarchy",
+  "@govMonarchy": {},
+
+  "govCommunist": "Communist",
+  "@govCommunist": {},
+
+  "govTheocracy": "Theocracy",
+  "@govTheocracy": {},
+
+  "govAuthoritarian": "Authoritarian",
+  "@govAuthoritarian": {},
+
+  "govFederalRepublic": "Federal Republic",
+  "@govFederalRepublic": {},
+
+  "govParliamentary": "Parliamentary",
+  "@govParliamentary": {},
+
+  "govMilitaryJunta": "Military Junta",
+  "@govMilitaryJunta": {},
+
+  "taxRevenueSub": "GDP ${gdp} × {rate}%",
+  "@taxRevenueSub": {
+    "placeholders": {
+      "gdp": { "type": "String" },
+      "rate": { "type": "String" }
+    }
+  },
+
+  "pctOfGdpSub": "{pct}% of GDP",
+  "@pctOfGdpSub": {
+    "placeholders": { "pct": { "type": "String" } }
+  },
+
+  "tutStep1Title": "🌍 Welcome, World Leader!",
+  "@tutStep1Title": {},
+
+  "tutStep1Body": "You are now in charge of a nation. The world map shows all countries — tap any to view details or manage diplomatic relations.",
+  "@tutStep1Body": {},
+
+  "tutStep2Title": "⏭️ Advance the Year",
+  "@tutStep2Title": {},
+
+  "tutStep2Body": "Tap the \"Year XXXX\" button to move time forward. Each year your economy, happiness, and approval update based on your choices.",
+  "@tutStep2Body": {},
+
+  "tutStep3Title": "👑 Approval Rating",
+  "@tutStep3Title": {},
+
+  "tutStep3Body": "Keep your approval above 15% or you''ll be impeached! Balance tax rates, policies, and happiness to stay in power.",
+  "@tutStep3Body": {},
+
+  "tutStep4Title": "📋 Policies & Buildings",
+  "@tutStep4Title": {},
+
+  "tutStep4Body": "Spend 💎 Political Capital on policies, and 🪙 Treasury on buildings. Always build a Power Plant first — other buildings need electricity!",
+  "@tutStep4Body": {},
+
+  "tutStep5Title": "🪙 Treasury & Diplomacy",
+  "@tutStep5Title": {},
+
+  "tutStep5Body": "Your treasury funds the nation. Tap the 🪙 badge to see the full budget. Tap any country to form alliances or impose sanctions.",
+  "@tutStep5Body": {},
+
+  "tipCounter": "TIP {step}/{total}",
+  "@tipCounter": {
+    "placeholders": {
+      "step": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+
+  "skipLabel": "Skip",
+  "@skipLabel": {},
+
+  "gotItLabel": "Got it!",
+  "@gotItLabel": {},
+
+  "nextArrow": "Next →",
+  "@nextArrow": {}
+}

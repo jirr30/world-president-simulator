@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/game_state_model.dart';
+import '../../providers/game_provider.dart';
 import '../../widgets/common/stat_card.dart';
 
-class SocialTab extends StatelessWidget {
+class SocialTab extends ConsumerWidget {
   final GameStateModel game;
 
   const SocialTab({super.key, required this.game});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -22,35 +26,35 @@ class SocialTab extends StatelessWidget {
           childAspectRatio: 1.35,
           children: [
             StatCard(
-              label: 'Education Index',
+              label: l10n.educationIndex,
               value: '${game.educationIndex.toStringAsFixed(0)}/100',
               icon: Icons.school_rounded,
               color: AppColors.social,
               progress: game.educationIndex / 100,
             ),
             StatCard(
-              label: 'Healthcare',
+              label: l10n.healthcareLabel,
               value: '${game.healthcareIndex.toStringAsFixed(0)}/100',
               icon: Icons.local_hospital_rounded,
               color: AppColors.info,
               progress: game.healthcareIndex / 100,
             ),
             StatCard(
-              label: 'Literacy Rate',
+              label: l10n.literacyRate,
               value: '${game.literacyRate.toStringAsFixed(1)}%',
               icon: Icons.menu_book_rounded,
               color: AppColors.social,
               progress: game.literacyRate / 100,
             ),
             StatCard(
-              label: 'Corruption',
+              label: l10n.statCorruption,
               value: '${game.corruption.toStringAsFixed(0)}%',
               icon: Icons.gavel_rounded,
               color: game.corruption < 30 ? AppColors.economy : game.corruption < 60 ? AppColors.warning : AppColors.danger,
               progress: game.corruption / 100,
             ),
             StatCard(
-              label: 'Food Security',
+              label: l10n.foodSecurity,
               value: '${game.foodSecurity.toStringAsFixed(0)}/100',
               icon: Icons.restaurant_rounded,
               color: game.foodSecurity > 60
@@ -61,7 +65,7 @@ class SocialTab extends StatelessWidget {
               progress: game.foodSecurity / 100,
             ),
             StatCard(
-              label: 'Agri. Output',
+              label: l10n.agriOutput,
               value: game.agriculturalOutput >= 1000
                   ? '\$${(game.agriculturalOutput / 1000).toStringAsFixed(1)}T'
                   : '\$${game.agriculturalOutput.toStringAsFixed(0)}B',
@@ -71,6 +75,8 @@ class SocialTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
+        _SocialBudgetCard(game: game, ref: ref),
+        const SizedBox(height: 16),
         _FoodStatusCard(game: game),
         const SizedBox(height: 16),
         _PopulationCard(game: game),
@@ -85,13 +91,14 @@ class _FoodStatusCard extends StatelessWidget {
 
   const _FoodStatusCard({required this.game});
 
-  String get _status {
+  String _status(BuildContext context) {
+    final l10n = context.l10n;
     final f = game.foodSecurity;
-    if (f >= 80) return 'Food Surplus';
-    if (f >= 60) return 'Food Secure';
-    if (f >= 40) return 'Moderate Risk';
-    if (f >= 20) return 'Food Insecure';
-    return 'Famine Crisis';
+    if (f >= 80) return l10n.foodSurplus;
+    if (f >= 60) return l10n.foodSecure;
+    if (f >= 40) return l10n.moderateRisk;
+    if (f >= 20) return l10n.foodInsecure;
+    return l10n.famineCrisis;
   }
 
   String get _emoji {
@@ -127,9 +134,9 @@ class _FoodStatusCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Food & Agriculture Status',
-                style: TextStyle(
+              Text(
+                context.l10n.foodAgricultureStatus,
+                style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontFamily: 'Poppins',
@@ -137,7 +144,7 @@ class _FoodStatusCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                _status,
+                _status(context),
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.w700,
@@ -186,9 +193,9 @@ class _PopulationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Population Overview',
-            style: TextStyle(
+          Text(
+            context.l10n.populationOverview,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontFamily: 'Poppins',
@@ -196,17 +203,153 @@ class _PopulationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _PopStat('Total Population', _popFormatted, Icons.groups_rounded),
-          _PopStat('Growth Rate', _growthRate, Icons.trending_up_rounded),
-          _PopStat('Capital City', game.country.capital, Icons.location_city_rounded),
-          _PopStat('Continent', game.country.continent, Icons.public_rounded),
-          _PopStat('Government', game.country.governmentLabel, Icons.account_balance_rounded),
-          _PopStat('Happiness Score', '${game.happiness.toStringAsFixed(0)}/100', Icons.sentiment_satisfied_rounded),
+          _PopStat(context.l10n.totalPopulation, _popFormatted, Icons.groups_rounded),
+          _PopStat(context.l10n.growthRate, _growthRate, Icons.trending_up_rounded),
+          _PopStat(context.l10n.capitalCity, game.country.capital, Icons.location_city_rounded),
+          _PopStat(context.l10n.continent, game.country.continent, Icons.public_rounded),
+          _PopStat(context.l10n.government, game.country.governmentLabel, Icons.account_balance_rounded),
+          _PopStat(context.l10n.happinessScore, '${game.happiness.toStringAsFixed(0)}/100', Icons.sentiment_satisfied_rounded),
         ],
       ),
     );
   }
 }
+
+// ─── Social Budget Card ────────────────────────────────────────────────────────
+
+class _SocialBudgetCard extends StatelessWidget {
+  final GameStateModel game;
+  final WidgetRef ref;
+
+  const _SocialBudgetCard({required this.game, required this.ref});
+
+  String _fmt(double v) {
+    if (v >= 1000) return '\$${(v / 1000).toStringAsFixed(1)}T';
+    if (v >= 1) return '\$${v.toStringAsFixed(1)}B';
+    return '\$${(v * 1000).toStringAsFixed(0)}M';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxBudget = game.gdpBillion * 0.08;
+    final hcPct = game.healthcareBudget / game.gdpBillion.clamp(1, double.infinity) * 100;
+    final edPct = game.educationBudget / game.gdpBillion.clamp(1, double.infinity) * 100;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.socialInvestment,
+            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.socialInvestmentSub,
+            style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11),
+          ),
+          const SizedBox(height: 16),
+
+          // Healthcare slider
+          Row(
+            children: [
+              const Icon(Icons.local_hospital_rounded, color: AppColors.info, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(context.l10n.healthcareLabel, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13)),
+              ),
+              Text(
+                game.healthcareBudget > 0 ? '${_fmt(game.healthcareBudget)} (${hcPct.toStringAsFixed(1)}% GDP)' : context.l10n.none,
+                style: TextStyle(color: game.healthcareBudget > 0 ? AppColors.info : AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          Slider(
+            value: game.healthcareBudget.clamp(0.0, maxBudget),
+            min: 0.0,
+            max: maxBudget,
+            divisions: 40,
+            activeColor: AppColors.info,
+            inactiveColor: AppColors.cardBorder,
+            onChanged: (v) => ref.read(gameProvider.notifier).setHealthcareBudget(v),
+          ),
+          if (game.healthcareBudget > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  _EffectChip('+${(hcPct * 0.5).toStringAsFixed(1)} HC/yr', AppColors.info),
+                  const SizedBox(width: 6),
+                  _EffectChip('+${(hcPct * 0.08).toStringAsFixed(2)} happiness', AppColors.accent),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 8),
+
+          // Education slider
+          Row(
+            children: [
+              const Icon(Icons.school_rounded, color: AppColors.social, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(context.l10n.educationLabel, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13)),
+              ),
+              Text(
+                game.educationBudget > 0 ? '${_fmt(game.educationBudget)} (${edPct.toStringAsFixed(1)}% GDP)' : context.l10n.none,
+                style: TextStyle(color: game.educationBudget > 0 ? AppColors.social : AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          Slider(
+            value: game.educationBudget.clamp(0.0, maxBudget),
+            min: 0.0,
+            max: maxBudget,
+            divisions: 40,
+            activeColor: AppColors.social,
+            inactiveColor: AppColors.cardBorder,
+            onChanged: (v) => ref.read(gameProvider.notifier).setEducationBudget(v),
+          ),
+          if (game.educationBudget > 0)
+            Row(
+              children: [
+                _EffectChip('+${(edPct * 0.5).toStringAsFixed(1)} EDU/yr', AppColors.social),
+                const SizedBox(width: 6),
+                _EffectChip('-${(edPct * 0.05).toStringAsFixed(2)} corruption', AppColors.economy),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EffectChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _EffectChip(this.label, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+// ─── Population stat row ───────────────────────────────────────────────────────
 
 class _PopStat extends StatelessWidget {
   final String label;

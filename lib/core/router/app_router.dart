@@ -10,6 +10,7 @@ import '../../presentation/screens/policy/policy_screen.dart';
 import '../../presentation/screens/buildings/buildings_screen.dart';
 import '../../presentation/screens/event/event_screen.dart';
 import '../../presentation/screens/game_over/game_over_screen.dart';
+import '../../core/l10n/l10n.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -61,13 +62,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Text('🌍', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(
-              'Page not found: ${state.uri.path}',
+              context.l10n.pageNotFound(state.uri.path),
               style: const TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => context.go('/home'),
-              child: const Text('Go Home'),
+              child: Text(context.l10n.goHome),
             ),
           ],
         ),

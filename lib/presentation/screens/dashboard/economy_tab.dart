@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/buildings_data.dart';
 import '../../../data/models/game_state_model.dart';
 import '../../providers/game_provider.dart';
@@ -13,10 +14,11 @@ class EconomyTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const _SectionTitle(title: 'Economic Indicators'),
+        _SectionTitle(title: l10n.economicIndicators),
         const SizedBox(height: 12),
         GridView.count(
           shrinkWrap: true,
@@ -27,7 +29,7 @@ class EconomyTab extends ConsumerWidget {
           childAspectRatio: 1.3,
           children: [
             StatCard(
-              label: 'Total GDP',
+              label: l10n.totalGdp,
               value: game.gdpBillion >= 1000
                   ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
                   : '\$${game.gdpBillion.toStringAsFixed(0)}B',
@@ -35,32 +37,32 @@ class EconomyTab extends ConsumerWidget {
               color: AppColors.economy,
             ),
             StatCard(
-              label: 'GDP per Capita',
+              label: l10n.gdpPerCapita,
               value: '\$${game.gdpPerCapita.toStringAsFixed(0)}',
               icon: Icons.person_rounded,
               color: AppColors.economy,
             ),
             StatCard(
-              label: 'GDP Growth',
+              label: l10n.statGdpGrowth,
               value: '${game.gdpGrowthRate > 0 ? '+' : ''}${game.gdpGrowthRate.toStringAsFixed(1)}%',
               icon: Icons.trending_up_rounded,
               color: game.gdpGrowthRate >= 0 ? AppColors.economy : AppColors.danger,
             ),
             StatCard(
-              label: 'Inflation',
+              label: l10n.inflation,
               value: '${game.inflation.toStringAsFixed(1)}%',
               icon: Icons.price_change_rounded,
               color: game.inflation < 4 ? AppColors.economy : game.inflation < 8 ? AppColors.warning : AppColors.danger,
             ),
             StatCard(
-              label: 'Unemployment',
+              label: l10n.unemployment,
               value: '${game.unemploymentRate.toStringAsFixed(1)}%',
               icon: Icons.work_off_rounded,
               color: game.unemploymentRate < 5 ? AppColors.economy : game.unemploymentRate < 10 ? AppColors.warning : AppColors.danger,
               progress: game.unemploymentRate / 60,
             ),
             StatCard(
-              label: 'Tax Rate',
+              label: l10n.taxRate,
               value: '${game.taxRate.toStringAsFixed(0)}%',
               icon: Icons.receipt_long_rounded,
               color: AppColors.diplomacy,
@@ -107,14 +109,15 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
     }
   }
 
-  String get _label {
-    if (_draft < 10) return 'Ultra Low — private sector surge';
-    if (_draft < 15) return 'Very Low — minimal public services';
-    if (_draft < 20) return 'Low — lean government';
-    if (_draft < 28) return 'Moderate — balanced budget';
-    if (_draft < 35) return 'High — strong public investment';
-    if (_draft < 45) return 'Very High — risk of capital flight';
-    return 'Extreme — capital flight + protest risk';
+  String _label(BuildContext context) {
+    final l10n = context.l10n;
+    if (_draft < 10) return l10n.ultraLowTaxRate;
+    if (_draft < 15) return l10n.veryLowTaxRate;
+    if (_draft < 20) return l10n.lowTaxRate;
+    if (_draft < 28) return l10n.moderateTaxRate;
+    if (_draft < 35) return l10n.highTaxRate;
+    if (_draft < 45) return l10n.veryHighTaxRate;
+    return l10n.extremeTaxRate;
   }
 
   Color get _accentColor {
@@ -165,6 +168,7 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final incomeStr = _projectedIncome >= 1000
         ? '\$${(_projectedIncome / 1000).toStringAsFixed(1)}T'
         : '\$${_projectedIncome.toStringAsFixed(0)}B';
@@ -191,10 +195,10 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
                 child: Icon(Icons.receipt_long_rounded, color: _accentColor, size: 16),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Tax Policy',
-                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
+                  l10n.taxPolicyTitle,
+                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
                 ),
               ),
               Text(
@@ -225,7 +229,7 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
             ),
           ),
 
-          // ── Zone bar (replaces min/max labels) ──────────────
+          // ── Zone bar ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _TaxZoneBar(taxRate: _draft),
@@ -240,7 +244,7 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              _label,
+              _label(context),
               style: TextStyle(color: _labelColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
@@ -251,21 +255,21 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
             children: [
               _EffectChip(
                 icon: Icons.account_balance_rounded,
-                label: 'Revenue',
+                label: l10n.revenueLabel,
                 value: incomeStr,
                 color: AppColors.economy,
               ),
               const SizedBox(width: 8),
               _EffectChip(
                 icon: Icons.trending_up_rounded,
-                label: 'GDP Growth',
+                label: l10n.statGdpGrowth,
                 value: '${_gdpEffect >= 0 ? '+' : ''}${_gdpEffect.toStringAsFixed(2)}%/yr',
                 color: _gdpEffect >= 0 ? AppColors.economy : AppColors.danger,
               ),
               const SizedBox(width: 8),
               _EffectChip(
                 icon: Icons.mood_rounded,
-                label: 'Happiness',
+                label: l10n.statHappiness,
                 value: '${_happinessEffect >= 0 ? '+' : ''}${_happinessEffect.toStringAsFixed(1)}/yr',
                 color: _happinessEffect >= 0 ? AppColors.economy : AppColors.danger,
               ),
@@ -279,21 +283,21 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
               children: [
                 _EffectChip(
                   icon: Icons.flight_takeoff_rounded,
-                  label: 'Capital Flight',
+                  label: l10n.capitalFlightLabel,
                   value: '${_capitalFlightGdp.toStringAsFixed(2)}%/yr',
                   color: AppColors.danger,
                 ),
                 const SizedBox(width: 8),
                 _EffectChip(
                   icon: Icons.shield_outlined,
-                  label: 'Stability',
+                  label: l10n.statStability,
                   value: '${_capitalFlightStability.toStringAsFixed(2)}/yr',
                   color: AppColors.danger,
                 ),
                 const SizedBox(width: 8),
                 _EffectChip(
                   icon: Icons.work_off_rounded,
-                  label: 'Unemployment',
+                  label: l10n.unemployment,
                   value: '+${_capitalFlightUnemployment.toStringAsFixed(2)}%/yr',
                   color: AppColors.danger,
                 ),
@@ -316,11 +320,10 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
                 children: [
                   const Icon(Icons.crisis_alert_rounded, color: AppColors.danger, size: 15),
                   const SizedBox(width: 7),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'PROTEST CONDITIONS ACTIVE — Mass protests will erupt next year. '
-                      'Lower tax below 45% or raise happiness above 40 to prevent them.',
-                      style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                      l10n.protestConditionsActive,
+                      style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -340,11 +343,10 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
                 children: [
                   const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 15),
                   const SizedBox(width: 7),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Capital flight active — investors are leaving. '
-                      'If happiness falls below 40, mass protests will erupt.',
-                      style: TextStyle(color: AppColors.warning, fontFamily: 'Poppins', fontSize: 11),
+                      l10n.capitalFlightActive,
+                      style: const TextStyle(color: AppColors.warning, fontFamily: 'Poppins', fontSize: 11),
                     ),
                   ),
                 ],
@@ -360,7 +362,7 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
                 const Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 13),
                 const SizedBox(width: 5),
                 Text(
-                  'New rate ${_draft.toStringAsFixed(0)}% takes full effect next year.',
+                  l10n.newRateTakesEffect(_draft.toStringAsFixed(0)),
                   style: const TextStyle(color: AppColors.accent, fontFamily: 'Poppins', fontSize: 11),
                 ),
               ],
@@ -373,22 +375,22 @@ class _TaxSliderCardState extends State<_TaxSliderCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tax Zone Bar: gradient track showing Safe / Warning / Crisis zones
+// Tax Zone Bar
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TaxZoneBar extends StatelessWidget {
   final double taxRate;
   const _TaxZoneBar({required this.taxRate});
 
-  // Zone boundaries (must match simulation_engine thresholds)
   static const double _min = 5.0, _max = 60.0;
   static const double _warnAt = 28.0, _dangerAt = 45.0;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     const range = _max - _min;
-    final warnStop = (_warnAt - _min) / range;   // ≈ 0.418
-    final dangerStop = (_dangerAt - _min) / range; // ≈ 0.727
+    final warnStop = (_warnAt - _min) / range;
+    final dangerStop = (_dangerAt - _min) / range;
     final thumbPct = (taxRate.clamp(_min, _max) - _min) / range;
 
     return LayoutBuilder(builder: (_, box) {
@@ -399,7 +401,6 @@ class _TaxZoneBar extends StatelessWidget {
           SizedBox(
             height: 12,
             child: Stack(clipBehavior: Clip.none, children: [
-              // Gradient track
               Positioned.fill(
                 top: 3,
                 bottom: 3,
@@ -420,21 +421,18 @@ class _TaxZoneBar extends StatelessWidget {
                   ),
                 ),
               ),
-              // Zone separator at warning threshold
               Positioned(
                 left: w * warnStop - 1,
                 top: 3,
                 bottom: 3,
                 child: Container(width: 2, color: AppColors.background.withValues(alpha: 0.85)),
               ),
-              // Zone separator at danger threshold
               Positioned(
                 left: w * dangerStop - 1,
                 top: 3,
                 bottom: 3,
                 child: Container(width: 2, color: AppColors.background.withValues(alpha: 0.85)),
               ),
-              // Current rate needle
               Positioned(
                 left: (w * thumbPct - 1.5).clamp(0.0, w - 3.0),
                 top: 0,
@@ -451,22 +449,21 @@ class _TaxZoneBar extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 4),
-          // Zone labels proportional to zone widths
           Row(
             children: [
               Expanded(
-                flex: 42, // safe zone: ~41.8% of range
-                child: Text('Safe', textAlign: TextAlign.left,
+                flex: 42,
+                child: Text(l10n.taxZoneSafeLabel, textAlign: TextAlign.left,
                     style: const TextStyle(color: AppColors.economy, fontSize: 9, fontFamily: 'Poppins')),
               ),
               Expanded(
-                flex: 31, // warning zone: ~30.9% of range
-                child: Text('Warning', textAlign: TextAlign.center,
+                flex: 31,
+                child: Text(l10n.taxZoneWarningLabel, textAlign: TextAlign.center,
                     style: const TextStyle(color: AppColors.warning, fontSize: 9, fontFamily: 'Poppins')),
               ),
               Expanded(
-                flex: 27, // crisis zone: ~27.3% of range
-                child: Text('Crisis', textAlign: TextAlign.right,
+                flex: 27,
+                child: Text(l10n.taxZoneCrisisLabel, textAlign: TextAlign.right,
                     style: const TextStyle(color: AppColors.danger, fontSize: 9, fontFamily: 'Poppins')),
               ),
             ],
@@ -523,6 +520,7 @@ class _TreasuryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final taxIncome = game.gdpBillion * game.taxRate / 100;
     final baseSpending = game.gdpBillion * 0.20;
     final policySpending = game.activePolicies.fold(0.0, (s, p) => s + p.cost);
@@ -550,8 +548,8 @@ class _TreasuryCard extends StatelessWidget {
             children: [
               const Text('🪙', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Treasury', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15)),
+              Expanded(
+                child: Text(l10n.treasury, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15)),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -571,13 +569,17 @@ class _TreasuryCard extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(color: AppColors.cardBorder, height: 1),
           const SizedBox(height: 12),
-          _BudgetRow('Tax Revenue', taxIncome, AppColors.economy),
-          _BudgetRow('Base Gov. Spending', -baseSpending, AppColors.danger),
-          _BudgetRow('Military Budget', -game.militaryBudget, AppColors.military),
+          _BudgetRow(l10n.taxRevenue, taxIncome, AppColors.economy),
+          _BudgetRow(l10n.baseGovSpending, -baseSpending, AppColors.danger),
+          _BudgetRow(l10n.militaryBudget, -game.militaryBudget, AppColors.military),
+          if (game.healthcareBudget > 0)
+            _BudgetRow(l10n.healthcareLabel, -game.healthcareBudget, AppColors.info),
+          if (game.educationBudget > 0)
+            _BudgetRow(l10n.educationLabel, -game.educationBudget, AppColors.social),
           if (policySpending > 0)
-            _BudgetRow('Active Policies', -policySpending, AppColors.social),
+            _BudgetRow(l10n.activePolicies, -policySpending, AppColors.social),
           if (buildingMaint > 0)
-            _BudgetRow('Building Maintenance', -buildingMaint, AppColors.resources),
+            _BudgetRow(l10n.buildingMaintenance, -buildingMaint, AppColors.resources),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -589,7 +591,7 @@ class _TreasuryCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Net per year', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(l10n.netPerYear, style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
                 Text(
                   '${netPerYear >= 0 ? '+' : ''}\$${netPerYear.abs().toStringAsFixed(0)}B',
                   style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700),
@@ -603,7 +605,7 @@ class _TreasuryCard extends StatelessWidget {
               children: [
                 const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 13),
                 const SizedBox(width: 5),
-                const Text('Treasury deficit — GDP growth and happiness penalized', style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 10)),
+                Text(l10n.treasuryDeficit, style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 10)),
               ],
             ),
           ],
@@ -648,6 +650,7 @@ class _DebtCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final color = game.nationalDebt < 50
         ? AppColors.economy
         : game.nationalDebt < 100
@@ -667,9 +670,9 @@ class _DebtCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'National Debt',
-                style: TextStyle(
+              Text(
+                l10n.nationalDebt,
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontFamily: 'Poppins',
@@ -677,7 +680,7 @@ class _DebtCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${game.nationalDebt.toStringAsFixed(0)}% of GDP',
+                l10n.nationalDebtPct(game.nationalDebt.toStringAsFixed(0)),
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.w700,
@@ -700,10 +703,10 @@ class _DebtCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             game.nationalDebt < 50
-                ? 'Healthy debt level — economy is sustainable.'
+                ? l10n.healthyDebt
                 : game.nationalDebt < 100
-                    ? 'Moderate debt — monitor carefully.'
-                    : 'Dangerous debt level — risk of default!',
+                    ? l10n.moderateDebt
+                    : l10n.dangerousDebt,
             style: TextStyle(
               color: color.withValues(alpha: 0.8),
               fontSize: 12,

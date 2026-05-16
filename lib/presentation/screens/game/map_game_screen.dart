@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/buildings_data.dart';
 import '../../../data/datasources/country_borders.dart';
 import '../../../data/datasources/country_coordinates.dart';
@@ -352,15 +353,15 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Leave Game?',
-            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins')),
-        content: const Text('Game is auto-saved. You can continue from the main menu.',
-            style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+        title: Text(context.l10n.leaveGameTitle,
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins')),
+        content: Text(context.l10n.leaveGameContent,
+            style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.l10n.cancel,
+                style: const TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -368,7 +369,7 @@ class _MapGameScreenState extends ConsumerState<MapGameScreen> {
               context.go('/home');
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Leave'),
+            child: Text(context.l10n.leave),
           ),
         ],
       ),
@@ -520,7 +521,7 @@ class _TopHud extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${game.leaderTitle}  •  Year ${game.currentYear}  •  Term ${game.yearsInOffice}/${game.termDurationYears}',
+                  context.l10n.leaderInfo(game.leaderTitle, game.currentYear, game.yearsInOffice, game.termDurationYears),
                   style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -600,6 +601,7 @@ class _BottomHudState extends State<_BottomHud>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = widget.game;
     final approvalColor = widget.approvalColor;
     final isWarning = game.approvalRating <= 25.0;
@@ -667,7 +669,7 @@ class _BottomHudState extends State<_BottomHud>
                       ],
                     ),
                     Text(
-                      isCritical ? 'IMPEACH RISK' : isWarning ? 'Low Approval' : 'Approval',
+                      isCritical ? l10n.impeachRisk : isWarning ? l10n.lowApproval : l10n.approval,
                       style: TextStyle(
                         color: isWarning
                             ? AppColors.danger.withValues(alpha: 0.55 + _pulse.value * 0.45)
@@ -694,19 +696,19 @@ class _BottomHudState extends State<_BottomHud>
           _HudChip(
               icon: Icons.trending_up_rounded,
               color: AppColors.economy,
-              label: 'GDP',
+              label: l10n.statGdp,
               value: gdpStr),
           const SizedBox(width: 6),
           _HudChip(
               icon: Icons.sentiment_satisfied_rounded,
               color: AppColors.accent,
-              label: 'Happy',
+              label: l10n.happyLabel,
               value: '${game.happiness.toStringAsFixed(0)}%'),
           const SizedBox(width: 6),
           _HudChip(
               icon: Icons.balance_rounded,
               color: AppColors.diplomacy,
-              label: 'Stable',
+              label: l10n.stableLabel,
               value: '${game.stability.toStringAsFixed(0)}%'),
           const SizedBox(width: 6),
           _CapitalChip(capital: game.politicalCapital),
@@ -715,8 +717,8 @@ class _BottomHudState extends State<_BottomHud>
             _HudChip(
               icon: game.yearsRemaining == 1 ? Icons.hourglass_empty_rounded : Icons.hourglass_bottom_rounded,
               color: game.yearsRemaining == 1 ? AppColors.danger : AppColors.warning,
-              label: 'Term',
-              value: game.yearsRemaining == 1 ? 'Last Year' : '${game.yearsRemaining}yr left',
+              label: l10n.termLabel,
+              value: game.yearsRemaining == 1 ? l10n.lastYear : l10n.yearsLeft(game.yearsRemaining),
             ),
           ],
           if (game.atWar) ...[
@@ -724,8 +726,8 @@ class _BottomHudState extends State<_BottomHud>
             _HudChip(
               icon: Icons.local_fire_department_rounded,
               color: AppColors.danger,
-              label: 'Status',
-              value: 'AT WAR',
+              label: l10n.statusLabel,
+              value: l10n.atWarStatus,
             ),
           ],
                 ],
@@ -814,10 +816,9 @@ class _CriticalApprovalBannerState extends State<_CriticalApprovalBanner>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final remaining = (widget.approval - 15.0).clamp(0.0, 5.0);
-    final label = remaining <= 1
-        ? 'CRITICAL — Advance year to trigger impeachment!'
-        : 'Approval dangerously low — impeached at 15%';
+    final label = remaining <= 1 ? l10n.approvalCritical : l10n.approvalDangerouslyLow;
 
     return AnimatedBuilder(
       animation: _pulse,
@@ -1012,7 +1013,7 @@ class _CapitalChip extends StatelessWidget {
                 ),
               ),
               Text(
-                'Capital',
+                context.l10n.capitalLabel,
                 style: const TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 8,
@@ -1048,6 +1049,7 @@ class _CountryDialog extends ConsumerStatefulWidget {
 class _CountryDialogState extends ConsumerState<_CountryDialog> {
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = ref.watch(gameProvider) ?? widget.game;
     final country = widget.country;
     final capital = game.politicalCapital;
@@ -1063,16 +1065,16 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
     final String relationLabel;
     if (widget.isPlayer) {
       relationColor = AppColors.accent;
-      relationLabel = 'Your Nation';
+      relationLabel = l10n.yourNation;
     } else if (isAlly) {
       relationColor = const Color(0xFF4CAF50);
-      relationLabel = playerAlly ? 'Allied' : 'Historic Ally';
+      relationLabel = playerAlly ? l10n.alliedRelLabel : l10n.historicAlly;
     } else if (isRival) {
       relationColor = AppColors.danger;
-      relationLabel = playerSanction ? 'Sanctioned' : 'Rival';
+      relationLabel = playerSanction ? l10n.sanctioned : l10n.rivalLabel;
     } else {
       relationColor = AppColors.textSecondary;
-      relationLabel = 'Neutral';
+      relationLabel = l10n.neutral;
     }
 
     void doAction(VoidCallback action, String successMsg, Color color) {
@@ -1087,7 +1089,7 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
 
     void notEnoughCapital(int need) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('💎 Not enough Political Capital (need $need, have $capital)',
+        content: Text('💎 ${l10n.buildingNotEnoughCapital(need, capital)}',
             style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.danger,
         duration: const Duration(seconds: 2),
@@ -1131,7 +1133,7 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                           children: [
                             Text(
                               country.name.toUpperCase(),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontFamily: 'Poppins',
                                 fontWeight: FontWeight.w800,
@@ -1176,10 +1178,10 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _StatBadge(label: 'Population', value: country.populationFormatted, icon: Icons.people_rounded, color: AppColors.diplomacy),
-                      _StatBadge(label: 'GDP', value: country.gdpFormatted, icon: Icons.trending_up_rounded, color: AppColors.economy),
-                      _StatBadge(label: 'HDI', value: country.humanDevelopmentIndex.toStringAsFixed(2), icon: Icons.school_rounded, color: AppColors.social),
-                      _StatBadge(label: 'Continent', value: country.continent, icon: Icons.public_rounded, color: AppColors.textSecondary),
+                      _StatBadge(label: l10n.countryPopulation, value: country.populationFormatted, icon: Icons.people_rounded, color: AppColors.diplomacy),
+                      _StatBadge(label: l10n.countryGdp, value: country.gdpFormatted, icon: Icons.trending_up_rounded, color: AppColors.economy),
+                      _StatBadge(label: l10n.hdi, value: country.humanDevelopmentIndex.toStringAsFixed(2), icon: Icons.school_rounded, color: AppColors.social),
+                      _StatBadge(label: l10n.countryContinent, value: country.continent, icon: Icons.public_rounded, color: AppColors.textSecondary),
                     ],
                   ),
                 ],
@@ -1194,7 +1196,7 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('DIPLOMACY', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+                      Text(l10n.diplomacyHeader, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
@@ -1203,30 +1205,30 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                           if (playerAlly)
                             _DialogActionBtn(
                               icon: Icons.handshake_rounded,
-                              label: 'Break Alliance',
+                              label: l10n.breakAlliance,
                               sub: '💎${SimulationEngine.breakCost}',
                               color: AppColors.warning,
                               canAfford: capital >= SimulationEngine.breakCost,
                               onTap: () => doAction(
                                 () => ref.read(gameProvider.notifier).breakAlliance(country.name),
-                                '🤝 Alliance with ${country.name} ended.',
+                                l10n.allianceEndedMsg(country.name),
                                 AppColors.warning,
                               ),
                               onNoCapital: () => notEnoughCapital(SimulationEngine.breakCost),
                             )
                           else if (nativeAlly)
-                            _DialogActionBtn(icon: Icons.handshake_rounded, label: 'Historic Ally', sub: 'Cannot break', color: const Color(0xFF4CAF50), canAfford: false, onTap: () {}, onNoCapital: () {})
+                            _DialogActionBtn(icon: Icons.handshake_rounded, label: l10n.historicAlly, sub: l10n.cannotBreakLabel, color: const Color(0xFF4CAF50), canAfford: false, onTap: () {}, onNoCapital: () {})
                           else if (!isRival)
                             _DialogActionBtn(
                               icon: Icons.handshake_rounded,
-                              label: 'Form Alliance',
-                              sub: game.diplomaticReputation < 30 ? 'Need rep ≥30' : '💎${SimulationEngine.allianceCost}',
+                              label: l10n.formAlliance,
+                              sub: game.diplomaticReputation < 30 ? l10n.needRepLabel : '💎${SimulationEngine.allianceCost}',
                               color: const Color(0xFF4CAF50),
                               canAfford: capital >= SimulationEngine.allianceCost,
                               requireRep: game.diplomaticReputation < 30,
                               onTap: () => doAction(
                                 () => ref.read(gameProvider.notifier).proposeAlliance(country.name),
-                                '🤝 Alliance formed with ${country.name}!',
+                                l10n.allianceFormedMsg(country.name),
                                 const Color(0xFF4CAF50),
                               ),
                               onNoCapital: () => notEnoughCapital(SimulationEngine.allianceCost),
@@ -1234,29 +1236,29 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                           if (playerSanction)
                             _DialogActionBtn(
                               icon: Icons.gavel_rounded,
-                              label: 'Lift Sanctions',
+                              label: l10n.liftSanction,
                               sub: '💎${SimulationEngine.liftCost}',
                               color: AppColors.diplomacy,
                               canAfford: capital >= SimulationEngine.liftCost,
                               onTap: () => doAction(
                                 () => ref.read(gameProvider.notifier).liftSanction(country.name),
-                                '✅ Sanctions on ${country.name} lifted.',
+                                l10n.sanctionsLiftedMsg(country.name),
                                 AppColors.diplomacy,
                               ),
                               onNoCapital: () => notEnoughCapital(SimulationEngine.liftCost),
                             )
                           else if (nativeRival)
-                            _DialogActionBtn(icon: Icons.gavel_rounded, label: 'Historic Rival', sub: 'Fixed', color: AppColors.danger, canAfford: false, onTap: () {}, onNoCapital: () {})
+                            _DialogActionBtn(icon: Icons.gavel_rounded, label: l10n.historicRival, sub: l10n.fixedRelLabel, color: AppColors.danger, canAfford: false, onTap: () {}, onNoCapital: () {})
                           else if (!isAlly)
                             _DialogActionBtn(
                               icon: Icons.gavel_rounded,
-                              label: 'Impose Sanctions',
+                              label: l10n.imposeSanction,
                               sub: '💎${SimulationEngine.sanctionCost}',
                               color: AppColors.danger,
                               canAfford: capital >= SimulationEngine.sanctionCost,
                               onTap: () => doAction(
                                 () => ref.read(gameProvider.notifier).imposeSanction(country.name),
-                                '⚠️ Sanctions on ${country.name} imposed.',
+                                l10n.sanctionsImposedMsg(country.name),
                                 AppColors.danger,
                               ),
                               onNoCapital: () => notEnoughCapital(SimulationEngine.sanctionCost),
@@ -1273,11 +1275,11 @@ class _CountryDialogState extends ConsumerState<_CountryDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PanelRow('Capital', country.capital, Icons.location_city_rounded),
-                    _PanelRow('Government', _govLabel(country.governmentType), Icons.account_balance_rounded),
-                    _PanelRow('Population', country.populationFormatted, Icons.people_rounded),
-                    _PanelRow('GDP', country.gdpFormatted, Icons.trending_up_rounded),
-                    _PanelRow('HDI', country.humanDevelopmentIndex.toStringAsFixed(3), Icons.school_rounded),
+                    _PanelRow(l10n.countryCapital, country.capital, Icons.location_city_rounded),
+                    _PanelRow(l10n.countryGovernment, _govLabel(l10n, country.governmentType), Icons.account_balance_rounded),
+                    _PanelRow(l10n.countryPopulation, country.populationFormatted, Icons.people_rounded),
+                    _PanelRow(l10n.countryGdp, country.gdpFormatted, Icons.trending_up_rounded),
+                    _PanelRow(l10n.hdi, country.humanDevelopmentIndex.toStringAsFixed(3), Icons.school_rounded),
                   ],
                 ),
               ),
@@ -1367,18 +1369,18 @@ class _DialogActionBtn extends StatelessWidget {
   }
 }
 
-String _govLabel(String type) {
-  const labels = <String, String>{
-    'democracy': 'Democracy',
-    'republic': 'Republic',
-    'constitutional_monarchy': 'Const. Monarchy',
-    'absolute_monarchy': 'Monarchy',
-    'communist': 'Communist',
-    'theocracy': 'Theocracy',
-    'authoritarian': 'Authoritarian',
-    'federal_republic': 'Federal Republic',
-    'parliamentary': 'Parliamentary',
-    'military_junta': 'Military Junta',
+String _govLabel(AppLocalizations l10n, String type) {
+  final labels = <String, String>{
+    'democracy': l10n.govDemocracy,
+    'republic': l10n.govRepublic,
+    'constitutional_monarchy': l10n.govConstMonarchy,
+    'absolute_monarchy': l10n.govMonarchy,
+    'communist': l10n.govCommunist,
+    'theocracy': l10n.govTheocracy,
+    'authoritarian': l10n.govAuthoritarian,
+    'federal_republic': l10n.govFederalRepublic,
+    'parliamentary': l10n.govParliamentary,
+    'military_junta': l10n.govMilitaryJunta,
   };
   return labels[type] ?? type.replaceAll('_', ' ');
 }
@@ -1443,6 +1445,7 @@ class _StatsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final gdpStr = game.gdpBillion >= 1000
         ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
         : '\$${game.gdpBillion.toStringAsFixed(0)}B';
@@ -1480,10 +1483,10 @@ class _StatsPanel extends StatelessWidget {
                 Text(game.country.flag,
                     style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Dashboard',
-                    style: TextStyle(
+                    l10n.dashboardLabel,
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontFamily: 'Poppins',
@@ -1503,71 +1506,86 @@ class _StatsPanel extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                _Section('Approval'),
-                _Row('Rating', '${game.approvalRating.toStringAsFixed(0)}%',
+                _Section(l10n.approval),
+                _Row(l10n.ratingLabel, '${game.approvalRating.toStringAsFixed(0)}%',
                     approvalColor, Icons.thumb_up_rounded),
-                _Row('Political Capital', '💎 ${game.politicalCapital}',
+                _Row(l10n.politicalCapital, '💎 ${game.politicalCapital}',
                     AppColors.accent, Icons.star_rounded),
-                _Row('Treasury', game.treasuryFormatted,
+                _Row(l10n.treasury, game.treasuryFormatted,
                     game.treasuryIsNegative ? AppColors.danger : AppColors.economy,
                     Icons.monetization_on_rounded),
                 const SizedBox(height: 10),
-                _Section('Economy'),
-                _Row('GDP', gdpStr, AppColors.economy,
+                _Section(l10n.economySection),
+                _Row(l10n.statGdp, gdpStr, AppColors.economy,
                     Icons.trending_up_rounded),
                 _Row(
-                    'Growth',
+                    l10n.growthLabel,
                     '${game.gdpGrowthRate > 0 ? '+' : ''}${game.gdpGrowthRate.toStringAsFixed(1)}%',
                     game.gdpGrowthRate >= 0
                         ? AppColors.economy
                         : AppColors.danger,
                     Icons.bar_chart_rounded),
-                _Row('Inflation',
+                _Row(l10n.inflation,
                     '${game.inflation.toStringAsFixed(1)}%',
                     AppColors.warning, Icons.price_change_rounded),
-                _Row('Unemployment',
+                _Row(l10n.unemployment,
                     '${game.unemploymentRate.toStringAsFixed(1)}%',
                     AppColors.textSecondary, Icons.work_off_rounded),
-                _Row('National Debt',
+                _Row(l10n.nationalDebt,
                     '${game.nationalDebt.toStringAsFixed(0)}% GDP',
                     game.nationalDebt > 80
                         ? AppColors.danger
                         : AppColors.economy,
                     Icons.account_balance_rounded),
                 const SizedBox(height: 10),
-                _Section('Society'),
-                _Row('Happiness',
+                _Section(l10n.societySection),
+                _Row(l10n.statHappiness,
                     '${game.happiness.toStringAsFixed(0)}%',
                     AppColors.accent, Icons.sentiment_satisfied_rounded),
-                _Row('Stability',
+                _Row(l10n.statStability,
                     '${game.stability.toStringAsFixed(0)}%',
                     AppColors.diplomacy, Icons.balance_rounded),
-                _Row('Corruption',
+                _Row(l10n.statCorruption,
                     '${game.corruption.toStringAsFixed(0)}%',
                     game.corruption > 60
                         ? AppColors.danger
                         : AppColors.warning,
                     Icons.warning_amber_rounded),
-                _Row('Education',
+                _Row(l10n.educationLabel,
                     '${game.educationIndex.toStringAsFixed(0)}/100',
                     AppColors.social, Icons.school_rounded),
-                _Row('Healthcare',
+                _Row(l10n.healthcareLabel,
                     '${game.healthcareIndex.toStringAsFixed(0)}/100',
                     AppColors.social, Icons.local_hospital_rounded),
                 const SizedBox(height: 10),
-                _Section('Military & Diplomacy'),
-                _Row('Military Str.',
+                _Section(l10n.militaryDiplomacy),
+                _Row(l10n.militaryStrLabel,
                     '${game.militaryStrength.toStringAsFixed(0)}/100',
                     AppColors.military, Icons.shield_rounded),
-                _Row('Reputation',
+                _Row(l10n.reputationLabel,
                     '${game.diplomaticReputation.toStringAsFixed(0)}/100',
                     AppColors.diplomacy, Icons.public_rounded),
                 if (game.atWar)
-                  _Row('Status', 'AT WAR', AppColors.danger,
+                  _Row(l10n.statusLabel, l10n.atWarStatus, AppColors.danger,
                       Icons.warning_rounded),
+                const SizedBox(height: 10),
+                _Section(l10n.resourcesSection),
+                _Row(l10n.natResources,
+                    '${game.naturalResourceIndex.toStringAsFixed(0)}/100',
+                    game.naturalResourceIndex > 50 ? AppColors.economy : AppColors.warning,
+                    Icons.diamond_rounded),
+                _Row(l10n.oilReserves,
+                    '${game.oilReserves.toStringAsFixed(0)}/100',
+                    game.oilReserves > 50 ? AppColors.economy : AppColors.warning,
+                    Icons.local_gas_station_rounded),
+                _Row(l10n.agriOutput,
+                    game.agriculturalOutput >= 1000
+                        ? '\$${(game.agriculturalOutput / 1000).toStringAsFixed(1)}T'
+                        : '\$${game.agriculturalOutput.toStringAsFixed(0)}B',
+                    AppColors.food, Icons.agriculture_rounded),
                 if (game.activePolicies.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  _Section('Active Policies (${game.activePolicies.length})'),
+                  _Section(l10n.activePoliciesCount(game.activePolicies.length)),
                   ...game.activePolicies.map((p) => Padding(
                         padding: const EdgeInsets.only(bottom: 5),
                         child: Row(
@@ -1671,6 +1689,7 @@ class _TreasurySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     // Budget calculations
     final taxIncome = game.gdpBillion * game.taxRate / 100;
     final baseSpending = game.gdpBillion * 0.20;
@@ -1680,7 +1699,7 @@ class _TreasurySheet extends StatelessWidget {
       final lvl = game.buildingLevels[b.id] ?? 0;
       if (lvl > 0) buildingMaint += lvl * b.moneyCostPerLevel * 0.02;
     }
-    final netPerYear = taxIncome - baseSpending - game.militaryBudget - policySpending - buildingMaint;
+    final netPerYear = taxIncome - baseSpending - game.militaryBudget - game.healthcareBudget - game.educationBudget - policySpending - buildingMaint;
     final isNeg = game.treasury < 0;
     final balColor = isNeg ? AppColors.danger : AppColors.economy;
     final netColor = netPerYear >= 0 ? AppColors.economy : AppColors.danger;
@@ -1719,9 +1738,9 @@ class _TreasurySheet extends StatelessWidget {
             children: [
               const Text('🪙', style: TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
-              const Expanded(
-                child: Text('Treasury & Budget',
-                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 17)),
+              Expanded(
+                child: Text(l10n.treasuryBudgetTitle,
+                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 17)),
               ),
               IconButton(
                 icon: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 20),
@@ -1747,7 +1766,7 @@ class _TreasurySheet extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Current Balance', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
+                    Text(l10n.treasuryBalance, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
                     const SizedBox(height: 2),
                     Text(game.treasuryFormatted,
                         style: TextStyle(color: balColor, fontWeight: FontWeight.w800, fontFamily: 'Poppins', fontSize: 28)),
@@ -1757,7 +1776,7 @@ class _TreasurySheet extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Net / year', style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10)),
+                    Text(l10n.netPerYearBadge, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10)),
                     const SizedBox(height: 2),
                     Text(fmt(netPerYear),
                         style: TextStyle(color: netColor, fontWeight: FontWeight.w700, fontFamily: 'Poppins', fontSize: 16)),
@@ -1776,13 +1795,13 @@ class _TreasurySheet extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 14),
-                  SizedBox(width: 6),
+                  const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 14),
+                  const SizedBox(width: 6),
                   Expanded(
-                    child: Text('Treasury defisit — GDP growth dan happiness terdampak',
-                        style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+                    child: Text(l10n.treasuryDeficit,
+                        style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
                   ),
                 ],
               ),
@@ -1790,24 +1809,35 @@ class _TreasurySheet extends StatelessWidget {
           ],
 
           const SizedBox(height: 18),
-          const Text('RINCIAN ANGGARAN',
-              style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
+          Text(l10n.budgetBreakdown,
+              style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, letterSpacing: 1.2, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
 
           // Income
-          _SheetBudgetRow(Icons.arrow_downward_rounded, 'Pendapatan Pajak', taxIncome, AppColors.economy,
-              sub: 'GDP \$${game.gdpBillion >= 1000 ? '${(game.gdpBillion / 1000).toStringAsFixed(1)}T' : '${game.gdpBillion.toStringAsFixed(0)}B'} × ${game.taxRate.toStringAsFixed(0)}%'),
+          _SheetBudgetRow(Icons.arrow_downward_rounded, l10n.taxRevenue, taxIncome, AppColors.economy,
+              sub: l10n.taxRevenueSub(
+                game.gdpBillion >= 1000
+                    ? '${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
+                    : '${game.gdpBillion.toStringAsFixed(0)}B',
+                game.taxRate.toStringAsFixed(0),
+              )),
           const _SheetDivider(),
 
           // Expenses
-          _SheetBudgetRow(Icons.arrow_upward_rounded, 'Belanja Pemerintah', -baseSpending, AppColors.danger, sub: '20% dari GDP'),
-          _SheetBudgetRow(Icons.shield_rounded, 'Anggaran Militer', -game.militaryBudget, AppColors.military),
+          _SheetBudgetRow(Icons.arrow_upward_rounded, l10n.govSpending, -baseSpending, AppColors.danger, sub: l10n.govSpendingSub),
+          _SheetBudgetRow(Icons.shield_rounded, l10n.militaryBudgetLabel, -game.militaryBudget, AppColors.military),
+          if (game.healthcareBudget > 0)
+            _SheetBudgetRow(Icons.local_hospital_rounded, l10n.healthcareLabel, -game.healthcareBudget, AppColors.info,
+                sub: l10n.pctOfGdpSub((game.healthcareBudget / game.gdpBillion * 100).toStringAsFixed(1))),
+          if (game.educationBudget > 0)
+            _SheetBudgetRow(Icons.school_rounded, l10n.educationLabel, -game.educationBudget, AppColors.social,
+                sub: l10n.pctOfGdpSub((game.educationBudget / game.gdpBillion * 100).toStringAsFixed(1))),
           if (policySpending > 0)
-            _SheetBudgetRow(Icons.policy_rounded, 'Kebijakan Aktif (${game.activePolicies.length})', -policySpending, AppColors.social,
-                sub: 'biaya tahunan gabungan'),
+            _SheetBudgetRow(Icons.policy_rounded, l10n.activePoliciesCount(game.activePolicies.length), -policySpending, AppColors.social,
+                sub: l10n.activePoliciesCost),
           if (buildingMaint > 0)
-            _SheetBudgetRow(Icons.location_city_rounded, 'Perawatan Bangunan', -buildingMaint, AppColors.resources,
-                sub: '2%/lv/tahun'),
+            _SheetBudgetRow(Icons.location_city_rounded, l10n.buildingMaintenance, -buildingMaint, AppColors.resources,
+                sub: l10n.buildingMaintenanceSub),
           const SizedBox(height: 8),
 
           // Net bar
@@ -1821,7 +1851,7 @@ class _TreasurySheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Net per tahun', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(l10n.netPerYear, style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                 Text(fmt(netPerYear), style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800)),
               ],
             ),
@@ -1947,6 +1977,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final taxIncome = game.gdpBillion * game.taxRate / 100;
     final baseSpending = game.gdpBillion * 0.20;
     final policySpending = game.activePolicies.fold(0.0, (s, p) => s + p.cost);
@@ -1962,7 +1993,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
         : game.approvalRating;
     final approvalTrend = game.approvalRating - prevApproval;
 
-    String _fmt(double v) => v.abs() >= 1000
+    String fmtVal(double v) => v.abs() >= 1000
         ? '\$${(v.abs() / 1000).toStringAsFixed(1)}T'
         : '\$${v.abs().toStringAsFixed(0)}B';
 
@@ -1982,9 +2013,9 @@ class _AdvanceConfirmSheet extends StatelessWidget {
             const Text('⏭️', style: TextStyle(fontSize: 20)),
             const SizedBox(width: 10),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Advance to Year ${game.currentYear + 1}',
+              Text(l10n.advanceToYearTitle(game.currentYear + 1),
                   style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
-              Text('Term year ${game.yearsInOffice + 1} of ${game.termDurationYears}',
+              Text(l10n.termYearOf(game.yearsInOffice + 1, game.termDurationYears),
                   style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
             ]),
           ]),
@@ -1993,13 +2024,13 @@ class _AdvanceConfirmSheet extends StatelessWidget {
           const SizedBox(height: 14),
 
           // Budget preview
-          const Text('BUDGET PROJECTION', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+          Text(l10n.budgetProjection, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
           const SizedBox(height: 10),
-          _ConfirmRow('Tax Revenue', '+${_fmt(taxIncome)}', AppColors.economy),
-          _ConfirmRow('Gov. Spending', '-${_fmt(baseSpending)}', AppColors.danger),
-          _ConfirmRow('Military', '-${_fmt(game.militaryBudget)}', AppColors.military),
-          if (policySpending > 0) _ConfirmRow('Policies', '-${_fmt(policySpending)}', AppColors.social),
-          if (maint > 0) _ConfirmRow('Maintenance', '-${_fmt(maint)}', AppColors.resources),
+          _ConfirmRow(l10n.taxRevenue, '+${fmtVal(taxIncome)}', AppColors.economy),
+          _ConfirmRow(l10n.govSpendingShort, '-${fmtVal(baseSpending)}', AppColors.danger),
+          _ConfirmRow(l10n.tabMilitary, '-${fmtVal(game.militaryBudget)}', AppColors.military),
+          if (policySpending > 0) _ConfirmRow(l10n.policies, '-${fmtVal(policySpending)}', AppColors.social),
+          if (maint > 0) _ConfirmRow(l10n.maintenanceLabel, '-${fmtVal(maint)}', AppColors.resources),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2009,8 +2040,8 @@ class _AdvanceConfirmSheet extends StatelessWidget {
               border: Border.all(color: netColor.withValues(alpha: 0.3)),
             ),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Net this year', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-              Text('${net >= 0 ? '+' : '-'}${_fmt(net)}', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800)),
+              Text(l10n.netThisYear, style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('${net >= 0 ? '+' : '-'}${fmtVal(net)}', style: TextStyle(color: netColor, fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800)),
             ]),
           ),
           const SizedBox(height: 14),
@@ -2020,7 +2051,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
             const Icon(Icons.thumb_up_rounded, size: 13, color: AppColors.textMuted),
             const SizedBox(width: 6),
             Flexible(
-              child: Text('Current approval: ${game.approvalRating.toStringAsFixed(0)}%',
+              child: Text(l10n.currentApprovalPct(game.approvalRating.toStringAsFixed(0)),
                   style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12)),
             ),
             const SizedBox(width: 6),
@@ -2043,9 +2074,9 @@ class _AdvanceConfirmSheet extends StatelessWidget {
               child: Row(children: [
                 const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 13),
                 const SizedBox(width: 6),
-                const Expanded(
-                  child: Text('Approval critical — impeached if it drops below 15%',
-                      style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
+                Expanded(
+                  child: Text(l10n.approvalCriticalNote,
+                      style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11)),
                 ),
               ]),
             ),
@@ -2061,7 +2092,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                child: Text(l10n.cancel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
               ),
             ),
             const SizedBox(width: 12),
@@ -2070,7 +2101,7 @@ class _AdvanceConfirmSheet extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onConfirm,
                 icon: const Icon(Icons.skip_next_rounded, size: 16, color: Colors.white),
-                label: Text('Advance to ${game.currentYear + 1}',
+                label: Text(l10n.advanceToYear(game.currentYear + 1),
                     style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
@@ -2116,7 +2147,8 @@ class _YearSummarySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final changes = _buildChanges();
+    final l10n = context.l10n;
+    final changes = _buildChanges(l10n);
     final approvalColor = AppColors.approvalColor(newGame.approvalRating);
 
     return Container(
@@ -2136,9 +2168,9 @@ class _YearSummarySheet extends StatelessWidget {
             const Text('📅', style: TextStyle(fontSize: 20)),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Year ${newGame.currentYear} Summary',
+              Text(l10n.yearXSummary(newGame.currentYear),
                   style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
-              Text('Political Capital earned: +${newGame.politicalCapital - oldGame.politicalCapital > 0 ? newGame.politicalCapital - oldGame.politicalCapital : 0} 💎',
+              Text(l10n.capitalEarned(newGame.politicalCapital - oldGame.politicalCapital > 0 ? newGame.politicalCapital - oldGame.politicalCapital : 0),
                   style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11)),
             ])),
             // Approval badge
@@ -2152,7 +2184,7 @@ class _YearSummarySheet extends StatelessWidget {
               child: Column(children: [
                 Text('${newGame.approvalRating.toStringAsFixed(0)}%',
                     style: TextStyle(color: approvalColor, fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w800, height: 1)),
-                Text('Approval', style: TextStyle(color: approvalColor.withValues(alpha: 0.7), fontFamily: 'Poppins', fontSize: 9)),
+                Text(l10n.approval, style: TextStyle(color: approvalColor.withValues(alpha: 0.7), fontFamily: 'Poppins', fontSize: 9)),
               ]),
             ),
           ]),
@@ -2161,12 +2193,12 @@ class _YearSummarySheet extends StatelessWidget {
           const SizedBox(height: 10),
 
           if (changes.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(child: Text('No significant changes this year.', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 13))),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: Text(l10n.noChanges, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 13))),
             )
           else ...[
-            const Text('STAT CHANGES', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+            Text(l10n.statChanges, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: changes.map((c) => _ChangeBadge(change: c)).toList()),
           ],
@@ -2186,8 +2218,8 @@ class _YearSummarySheet extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(
                   newGame.approvalRating <= 20
-                      ? 'CRITICAL: Impeachment imminent if approval drops below 15%!'
-                      : 'Warning: Approval at ${newGame.approvalRating.toStringAsFixed(0)}% — take action before next year.',
+                      ? l10n.criticalImpeachImminent
+                      : l10n.warningApprovalAction(newGame.approvalRating.toStringAsFixed(0)),
                   style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
                 )),
               ]),
@@ -2204,7 +2236,7 @@ class _YearSummarySheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Continue', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14)),
+              child: Text(l10n.continueBtn, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14)),
             ),
           ),
         ],
@@ -2212,23 +2244,31 @@ class _YearSummarySheet extends StatelessWidget {
     );
   }
 
-  List<_Change> _buildChanges() {
+  List<_Change> _buildChanges(AppLocalizations l10n) {
     final list = <_Change>[];
     void add(String label, String emoji, double before, double after, String unit, {bool lowerIsBetter = false, bool isCurrency = false}) {
       final delta = after - before;
       if (delta.abs() < 0.2) return;
       list.add(_Change(label, emoji, delta, after, unit, lowerIsBetter: lowerIsBetter, isCurrency: isCurrency));
     }
-    add('Approval',     '👑', oldGame.approvalRating,     newGame.approvalRating,     '%');
-    add('Happiness',    '😊', oldGame.happiness,           newGame.happiness,           '%');
-    add('GDP Growth',   '📈', oldGame.gdpGrowthRate,       newGame.gdpGrowthRate,       '%');
-    add('Stability',    '⚖️', oldGame.stability,           newGame.stability,           '%');
-    add('Inflation',    '💸', oldGame.inflation,            newGame.inflation,            '%', lowerIsBetter: true);
-    add('Unemployment', '👷', oldGame.unemploymentRate,    newGame.unemploymentRate,    '%', lowerIsBetter: true);
-    add('Diplo. Rep.',  '🌐', oldGame.diplomaticReputation,newGame.diplomaticReputation,'/100');
-    add('Food Security','🌾', oldGame.foodSecurity,        newGame.foodSecurity,        '%');
-    add('Military',     '🛡️', oldGame.militaryStrength,    newGame.militaryStrength,    '/100');
-    add('Treasury',     '🪙', oldGame.treasury,             newGame.treasury,             'B', isCurrency: true);
+    add(l10n.approval,          '👑', oldGame.approvalRating,        newGame.approvalRating,        '%');
+    add(l10n.statHappiness,     '😊', oldGame.happiness,              newGame.happiness,              '%');
+    add(l10n.statGdpGrowth,     '📈', oldGame.gdpGrowthRate,          newGame.gdpGrowthRate,          '%');
+    add(l10n.statStability,     '⚖️', oldGame.stability,              newGame.stability,              '%');
+    add(l10n.inflation,         '💸', oldGame.inflation,               newGame.inflation,               '%', lowerIsBetter: true);
+    add(l10n.unemployment,      '👷', oldGame.unemploymentRate,       newGame.unemploymentRate,       '%', lowerIsBetter: true);
+    add(l10n.diploRepLabel,     '🌐', oldGame.diplomaticReputation,   newGame.diplomaticReputation,   '/100');
+    add(l10n.foodSecurity,      '🌾', oldGame.foodSecurity,           newGame.foodSecurity,           '%');
+    add(l10n.militaryStat,      '🛡️', oldGame.militaryStrength,       newGame.militaryStrength,       '/100');
+    add(l10n.treasury,          '🪙', oldGame.treasury,                newGame.treasury,                'B', isCurrency: true);
+    add(l10n.educationLabel,    '📚', oldGame.educationIndex,         newGame.educationIndex,         '/100');
+    add(l10n.healthcareLabel,   '🏥', oldGame.healthcareIndex,        newGame.healthcareIndex,        '/100');
+    add(l10n.literacyLabel,     '📖', oldGame.literacyRate,            newGame.literacyRate,            '%');
+    add(l10n.troopsLabel,       '🪖', oldGame.troopCount,              newGame.troopCount,              'K');
+    add(l10n.milReadinessLabel, '⚙️', oldGame.militaryReadiness,     newGame.militaryReadiness,     '/100');
+    add(l10n.natResources,      '⛏️', oldGame.naturalResourceIndex,  newGame.naturalResourceIndex,  '/100');
+    add(l10n.oilReserves,       '🛢️', oldGame.oilReserves,            newGame.oilReserves,            '/100');
+    add(l10n.agriOutput,        '🌾', oldGame.agriculturalOutput,    newGame.agriculturalOutput,    'B', isCurrency: true);
     return list;
   }
 }
@@ -2300,12 +2340,12 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
   late AnimationController _ctrl;
   late Animation<double> _fade;
 
-  static const _steps = [
-    (Icons.public_rounded,         '🌍 Welcome, World Leader!',     'You are now in charge of a nation. The world map shows all countries — tap any to view details or manage diplomatic relations.', false),
-    (Icons.skip_next_rounded,      '⏭️ Advance the Year',            'Tap the "Year XXXX" button to move time forward. Each year your economy, happiness, and approval update based on your choices.', true),
-    (Icons.thumb_up_rounded,       '👑 Approval Rating',             'Keep your approval above 15% or you\'ll be impeached! Balance tax rates, policies, and happiness to stay in power.', true),
-    (Icons.policy_rounded,         '📋 Policies & Buildings',        'Spend 💎 Political Capital on policies, and 🪙 Treasury on buildings. Always build a Power Plant first — other buildings need electricity!', false),
-    (Icons.account_balance_rounded,'🪙 Treasury & Diplomacy',        'Your treasury funds the nation. Tap the 🪙 badge to see the full budget. Tap any country to form alliances or impose sanctions.', false),
+  static List<(IconData, String, String, bool)> _buildSteps(AppLocalizations l10n) => [
+    (Icons.public_rounded,          l10n.tutStep1Title, l10n.tutStep1Body, false),
+    (Icons.skip_next_rounded,       l10n.tutStep2Title, l10n.tutStep2Body, true),
+    (Icons.thumb_up_rounded,        l10n.tutStep3Title, l10n.tutStep3Body, true),
+    (Icons.policy_rounded,          l10n.tutStep4Title, l10n.tutStep4Body, false),
+    (Icons.account_balance_rounded, l10n.tutStep5Title, l10n.tutStep5Body, false),
   ];
 
   @override
@@ -2322,8 +2362,10 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
     super.dispose();
   }
 
+  static const _totalSteps = 5;
+
   void _next() {
-    if (_step < _steps.length - 1) {
+    if (_step < _totalSteps - 1) {
       _ctrl.reverse().then((_) {
         setState(() => _step++);
         _ctrl.forward();
@@ -2335,31 +2377,28 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
 
   @override
   Widget build(BuildContext context) {
-    final step = _steps[_step];
-    final isLast = _step == _steps.length - 1;
-    final atBottom = step.$4; // position card at top when true (pointing to bottom HUD)
+    final l10n = context.l10n;
+    final steps = _buildSteps(l10n);
+    final step = steps[_step];
+    final isLast = _step == _totalSteps - 1;
+    final atBottom = step.$4;
 
     return Stack(
       children: [
-        // Semi-transparent overlay
         Container(color: Colors.black.withValues(alpha: 0.65)),
-
-        // Tutorial card
         Positioned(
-          top: atBottom ? null : null,
           bottom: atBottom ? 75 : null,
           left: 16,
           right: 16,
-          // Center vertically when not at bottom
           child: atBottom
-              ? FadeTransition(opacity: _fade, child: _buildCard(step, isLast))
-              : Center(child: FadeTransition(opacity: _fade, child: _buildCard(step, isLast))),
+              ? FadeTransition(opacity: _fade, child: _buildCard(l10n, step, isLast))
+              : Center(child: FadeTransition(opacity: _fade, child: _buildCard(l10n, step, isLast))),
         ),
       ],
     );
   }
 
-  Widget _buildCard((IconData, String, String, bool) step, bool isLast) {
+  Widget _buildCard(AppLocalizations l10n, (IconData, String, String, bool) step, bool isLast) {
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -2382,7 +2421,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
               ),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('TIP ${_step + 1}/${_steps.length}',
+                Text(l10n.tipCounter(_step + 1, _totalSteps),
                     style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10, letterSpacing: 1.0)),
                 Text(step.$2,
                     style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
@@ -2393,8 +2432,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
                 style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13, height: 1.6)),
             const SizedBox(height: 16),
             Row(children: [
-              // Step dots
-              ...List.generate(_steps.length, (i) => AnimatedContainer(
+              ...List.generate(_totalSteps, (i) => AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: i == _step ? 18 : 6,
                 height: 6,
@@ -2408,7 +2446,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
               if (!isLast)
                 TextButton(
                   onPressed: widget.onDone,
-                  child: const Text('Skip', style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12)),
+                  child: Text(l10n.skipLabel, style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12)),
                 ),
               const SizedBox(width: 4),
               ElevatedButton(
@@ -2418,7 +2456,7 @@ class _TutorialOverlayState extends State<_TutorialOverlay> with SingleTickerPro
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: Text(isLast ? 'Got it!' : 'Next →',
+                child: Text(isLast ? l10n.gotItLabel : l10n.nextArrow,
                     style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12)),
               ),
             ]),

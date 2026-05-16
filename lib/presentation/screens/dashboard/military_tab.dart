@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/game_state_model.dart';
 import '../../../services/simulation_engine.dart';
 import '../../providers/game_provider.dart';
@@ -13,6 +14,7 @@ class MilitaryTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -25,40 +27,40 @@ class MilitaryTab extends ConsumerWidget {
           childAspectRatio: 1.35,
           children: [
             StatCard(
-              label: 'Military Strength',
+              label: l10n.militaryStrength,
               value: '${game.militaryStrength.toStringAsFixed(0)}/100',
               icon: Icons.shield_rounded,
               color: AppColors.military,
               progress: game.militaryStrength / 100,
             ),
             StatCard(
-              label: 'Military Budget',
+              label: l10n.militaryBudget,
               value: '\$${game.militaryBudget.toStringAsFixed(1)}B',
               icon: Icons.monetization_on_rounded,
               color: AppColors.military,
               subtitle: '${(game.militaryBudget / game.gdpBillion * 100).toStringAsFixed(1)}% GDP',
             ),
             StatCard(
-              label: 'Active Troops',
+              label: l10n.activeTroops,
               value: game.troopCountFormatted,
               icon: Icons.people_rounded,
               color: AppColors.military,
             ),
             StatCard(
-              label: 'Readiness',
+              label: l10n.readiness,
               value: '${game.militaryReadiness.toStringAsFixed(0)}%',
               icon: Icons.military_tech_rounded,
               color: AppColors.military,
               progress: game.militaryReadiness / 100,
             ),
             StatCard(
-              label: 'War Status',
-              value: game.atWar ? 'At War' : 'At Peace',
+              label: l10n.warStatus,
+              value: game.atWar ? l10n.atWar : l10n.atPeace,
               icon: game.atWar ? Icons.local_fire_department_rounded : Icons.handshake_rounded,
               color: game.atWar ? AppColors.danger : AppColors.economy,
             ),
             StatCard(
-              label: 'Stability',
+              label: l10n.statStability,
               value: '${game.stability.toStringAsFixed(0)}%',
               icon: Icons.security_rounded,
               color: AppColors.diplomacy,
@@ -96,10 +98,11 @@ class _WarControlsCard extends StatefulWidget {
 
 class _WarControlsCardState extends State<_WarControlsCard> {
   Future<void> _confirmDeclare() async {
+    final l10n = context.l10n;
     final capital = widget.game.politicalCapital;
     if (capital < SimulationEngine.warDeclarationCost) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Need 💎${SimulationEngine.warDeclarationCost} political capital to declare war.',
+        content: Text(l10n.needsCapitalToWar(SimulationEngine.warDeclarationCost),
             style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.danger,
       ));
@@ -110,32 +113,32 @@ class _WarControlsCardState extends State<_WarControlsCard> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('⚔️  Declare War?',
-            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        title: Text(l10n.declareWarTitle,
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('This will put your country on a war footing.',
-                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+            Text(l10n.declareWarSubtitle,
+                style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
             const SizedBox(height: 12),
-            _WarEffectRow('Cost', '💎${SimulationEngine.warDeclarationCost} political capital', AppColors.warning),
-            _WarEffectRow('Diplomatic Rep', '−5', AppColors.danger),
-            _WarEffectRow('Happiness / yr', '−3.0', AppColors.danger),
-            _WarEffectRow('Stability / yr', '−1.5', AppColors.danger),
-            _WarEffectRow('GDP Growth / yr', '−1.5%', AppColors.danger),
-            _WarEffectRow('Troops / yr', '−15K (losses)', AppColors.danger),
+            _WarEffectRow(l10n.costLabel, '💎${SimulationEngine.warDeclarationCost} ${l10n.politicalCapital}', AppColors.warning),
+            _WarEffectRow(l10n.diplomacy, '−5', AppColors.danger),
+            _WarEffectRow('${l10n.statHappiness} / yr', '−3.0', AppColors.danger),
+            _WarEffectRow('${l10n.statStability} / yr', '−1.5', AppColors.danger),
+            _WarEffectRow('${l10n.statGdpGrowth} / yr', '−1.5%', AppColors.danger),
+            _WarEffectRow('${l10n.troopsLabel} / yr', '−15K (losses)', AppColors.danger),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Declare War', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+            child: Text(l10n.declareWar, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -145,35 +148,36 @@ class _WarControlsCardState extends State<_WarControlsCard> {
   }
 
   Future<void> _confirmPeace() async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('🕊️  Sue for Peace?',
-            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        title: Text(l10n.sueForPeaceTitle,
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('End the conflict and return to peacetime.',
-                style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+            Text(l10n.sueForPeaceSubtitle,
+                style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
             const SizedBox(height: 12),
-            _WarEffectRow('Cost', '💎${SimulationEngine.peaceCost} political capital', AppColors.warning),
-            _WarEffectRow('Happiness', '+5', AppColors.economy),
-            _WarEffectRow('Stability', '+3', AppColors.economy),
-            _WarEffectRow('Diplomatic Rep', '+3', AppColors.economy),
+            _WarEffectRow(l10n.costLabel, '💎${SimulationEngine.peaceCost} ${l10n.politicalCapital}', AppColors.warning),
+            _WarEffectRow(l10n.statHappiness, '+5', AppColors.economy),
+            _WarEffectRow(l10n.statStability, '+3', AppColors.economy),
+            _WarEffectRow(l10n.diplomacy, '+3', AppColors.economy),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.economy),
-            child: const Text('Sue for Peace', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+            child: Text(l10n.sueForPeace, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -184,6 +188,7 @@ class _WarControlsCardState extends State<_WarControlsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = widget.game;
     final atWar = game.atWar;
     final borderColor = atWar ? AppColors.danger : AppColors.cardBorder;
@@ -222,7 +227,7 @@ class _WarControlsCardState extends State<_WarControlsCard> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  atWar ? 'Active Conflict' : 'War & Conflict',
+                  atWar ? l10n.activeConflict : l10n.warConflict,
                   style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
                 ),
               ),
@@ -233,7 +238,7 @@ class _WarControlsCardState extends State<_WarControlsCard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  atWar ? 'AT WAR' : 'AT PEACE',
+                  atWar ? l10n.atWarStatus : l10n.atPeaceStatus,
                   style: TextStyle(
                     color: atWar ? AppColors.danger : AppColors.economy,
                     fontFamily: 'Poppins',
@@ -250,28 +255,28 @@ class _WarControlsCardState extends State<_WarControlsCard> {
             const SizedBox(height: 12),
             const Divider(color: AppColors.cardBorder, height: 1),
             const SizedBox(height: 10),
-            const Text(
-              'Ongoing war penalties (per year):',
-              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 11),
+            Text(
+              l10n.ongoingWarPenalties,
+              style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 11),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _WarEffectChip(Icons.mood_bad_rounded, 'Happiness', '−3/yr', AppColors.danger),
+                _WarEffectChip(Icons.mood_bad_rounded, l10n.statHappiness, '−3/yr', AppColors.danger),
                 const SizedBox(width: 6),
-                _WarEffectChip(Icons.shield_outlined, 'Stability', '−1.5/yr', AppColors.danger),
+                _WarEffectChip(Icons.shield_outlined, l10n.statStability, '−1.5/yr', AppColors.danger),
                 const SizedBox(width: 6),
-                _WarEffectChip(Icons.trending_down_rounded, 'GDP', '−1.5%/yr', AppColors.danger),
+                _WarEffectChip(Icons.trending_down_rounded, l10n.statGdp, '−1.5%/yr', AppColors.danger),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                _WarEffectChip(Icons.people_rounded, 'Troops', '−15K/yr', AppColors.danger),
+                _WarEffectChip(Icons.people_rounded, l10n.troopsLabel, '−15K/yr', AppColors.danger),
                 const SizedBox(width: 6),
-                _WarEffectChip(Icons.military_tech_rounded, 'Readiness', '−1/yr', AppColors.danger),
+                _WarEffectChip(Icons.military_tech_rounded, l10n.readiness, '−1/yr', AppColors.danger),
                 const SizedBox(width: 6),
-                _WarEffectChip(Icons.public_rounded, 'Diplo Rep', '−2/yr', AppColors.danger),
+                _WarEffectChip(Icons.public_rounded, l10n.diploRepLabel, '−2/yr', AppColors.danger),
               ],
             ),
             const SizedBox(height: 12),
@@ -283,14 +288,14 @@ class _WarControlsCardState extends State<_WarControlsCard> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.crisis_alert_rounded, color: AppColors.danger, size: 13),
-                    SizedBox(width: 6),
+                    const Icon(Icons.crisis_alert_rounded, color: AppColors.danger, size: 13),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Military critically weak — peace negotiations will be forced at end of year.',
-                        style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                        l10n.militaryCriticallyWeak,
+                        style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -303,7 +308,7 @@ class _WarControlsCardState extends State<_WarControlsCard> {
               child: OutlinedButton.icon(
                 onPressed: _confirmPeace,
                 icon: const Icon(Icons.handshake_rounded, size: 16),
-                label: Text('Sue for Peace  (💎${SimulationEngine.peaceCost})',
+                label: Text('${l10n.sueForPeace}  (💎${SimulationEngine.peaceCost})',
                     style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.economy,
@@ -315,14 +320,14 @@ class _WarControlsCardState extends State<_WarControlsCard> {
             ),
           ] else ...[
             const SizedBox(height: 12),
-            const Text(
-              'Your country is currently at peace.',
-              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12),
+            Text(
+              l10n.currentlyAtPeace,
+              style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 12),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Declaring war will impose severe annual penalties on happiness, stability, and GDP growth until peace is negotiated.',
-              style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11),
+            Text(
+              l10n.declaringWarWarning,
+              style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 11),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -332,7 +337,7 @@ class _WarControlsCardState extends State<_WarControlsCard> {
                     ? _confirmDeclare
                     : null,
                 icon: const Icon(Icons.local_fire_department_rounded, size: 16),
-                label: Text('Declare War  (💎${SimulationEngine.warDeclarationCost})',
+                label: Text('${l10n.declareWar}  (💎${SimulationEngine.warDeclarationCost})',
                     style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.danger,
@@ -424,7 +429,7 @@ class _MilitaryBudgetSliderCard extends StatefulWidget {
 }
 
 class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
-  late double _draftPct; // percentage of GDP
+  late double _draftPct;
 
   @override
   void initState() {
@@ -435,7 +440,6 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
   @override
   void didUpdateWidget(_MilitaryBudgetSliderCard old) {
     super.didUpdateWidget(old);
-    // Resync when a year passes (GDP changes, budget stays same → ratio shifts)
     if (old.game.currentYear != widget.game.currentYear) {
       _draftPct = _currentPct.clamp(0.5, 15.0);
     }
@@ -462,13 +466,14 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
     return '$sign${v.toStringAsFixed(1)}$unit/yr';
   }
 
-  String get _label {
-    if (_draftPct < 1.0) return 'Minimal — defense capability degrading';
-    if (_draftPct < 2.0) return 'Low — basic deterrence only';
-    if (_draftPct < 3.5) return 'Moderate — balanced defense';
-    if (_draftPct < 6.0) return 'High — strong regional power';
-    if (_draftPct < 10.0) return 'Very High — major military investment';
-    return 'Maximum — full military-industrial complex';
+  String _label(BuildContext context) {
+    final l10n = context.l10n;
+    if (_draftPct < 1.0) return l10n.milBudgetMinimal;
+    if (_draftPct < 2.0) return l10n.milBudgetLow;
+    if (_draftPct < 3.5) return l10n.milBudgetModerate;
+    if (_draftPct < 6.0) return l10n.milBudgetHigh;
+    if (_draftPct < 10.0) return l10n.milBudgetVeryHigh;
+    return l10n.milBudgetMaximum;
   }
 
   Color get _labelColor {
@@ -480,6 +485,7 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -490,7 +496,6 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -502,10 +507,10 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
                 child: const Icon(Icons.account_balance_rounded, color: AppColors.military, size: 16),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Military Budget',
-                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
+                  l10n.militaryBudgetLabel,
+                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 15),
                 ),
               ),
               Column(
@@ -525,7 +530,6 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
           ),
           const SizedBox(height: 12),
 
-          // Slider
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: AppColors.military,
@@ -549,7 +553,6 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
             ),
           ),
 
-          // Range labels
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
@@ -562,7 +565,6 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
           ),
           const SizedBox(height: 12),
 
-          // Status label
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -570,32 +572,31 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              _label,
+              _label(context),
               style: TextStyle(color: _labelColor, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Effect chips
           Row(
             children: [
               _EffectChip(
                 icon: Icons.shield_rounded,
-                label: 'Strength',
+                label: l10n.strengthLabel,
                 value: _fmtEffect(_strengthEffect, ''),
                 color: _strengthEffect >= 0 ? AppColors.military : AppColors.danger,
               ),
               const SizedBox(width: 8),
               _EffectChip(
                 icon: Icons.military_tech_rounded,
-                label: 'Readiness',
+                label: l10n.readiness,
                 value: _fmtEffect(_readinessEffect, ''),
                 color: _readinessEffect >= 0 ? AppColors.military : AppColors.danger,
               ),
               const SizedBox(width: 8),
               _EffectChip(
                 icon: Icons.people_rounded,
-                label: 'Troops',
+                label: l10n.troopsLabel,
                 value: _fmtEffect(_troopEffect, 'K'),
                 color: _troopEffect >= 0 ? AppColors.military : AppColors.danger,
               ),
@@ -609,7 +610,7 @@ class _MilitaryBudgetSliderCardState extends State<_MilitaryBudgetSliderCard> {
                 const Icon(Icons.info_outline_rounded, color: AppColors.military, size: 13),
                 const SizedBox(width: 5),
                 Text(
-                  'New budget ${_draftPct.toStringAsFixed(1)}% GDP (${_fmt(_draftBudget)}) takes effect next year.',
+                  l10n.newBudgetTakesEffect(_draftPct.toStringAsFixed(1), _fmt(_draftBudget)),
                   style: const TextStyle(color: AppColors.military, fontFamily: 'Poppins', fontSize: 11),
                 ),
               ],
@@ -669,6 +670,7 @@ class _StrategicResourcesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -679,9 +681,9 @@ class _StrategicResourcesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Strategic Resources',
-            style: TextStyle(
+          Text(
+            l10n.strategicResources,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontFamily: 'Poppins',
@@ -690,14 +692,14 @@ class _StrategicResourcesCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _ResourceBar(
-            label: 'Natural Resources',
+            label: l10n.naturalResources,
             value: game.naturalResourceIndex,
             icon: Icons.terrain_rounded,
             color: AppColors.resources,
           ),
           const SizedBox(height: 10),
           _ResourceBar(
-            label: 'Oil & Energy Reserves',
+            label: l10n.oilEnergyReserves,
             value: game.oilReserves,
             icon: Icons.local_gas_station_rounded,
             color: AppColors.warning,
@@ -775,13 +777,14 @@ class _MilitaryRankCard extends StatelessWidget {
 
   const _MilitaryRankCard({required this.strength});
 
-  String get _rank {
-    if (strength >= 90) return 'Global Superpower';
-    if (strength >= 75) return 'Major Military Power';
-    if (strength >= 55) return 'Regional Power';
-    if (strength >= 35) return 'Moderate Force';
-    if (strength >= 15) return 'Limited Capability';
-    return 'Minimal Defense';
+  String _rank(BuildContext context) {
+    final l10n = context.l10n;
+    if (strength >= 90) return l10n.globalSuperpower;
+    if (strength >= 75) return l10n.majorMilitaryPower;
+    if (strength >= 55) return l10n.regionalPower;
+    if (strength >= 35) return l10n.moderateForce;
+    if (strength >= 15) return l10n.limitedCapability;
+    return l10n.minimalDefense;
   }
 
   String get _emoji {
@@ -812,9 +815,9 @@ class _MilitaryRankCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Military Classification',
-                style: TextStyle(
+              Text(
+                context.l10n.militaryClassification,
+                style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontFamily: 'Poppins',
@@ -822,7 +825,7 @@ class _MilitaryRankCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                _rank,
+                _rank(context),
                 style: const TextStyle(
                   color: AppColors.military,
                   fontWeight: FontWeight.w700,

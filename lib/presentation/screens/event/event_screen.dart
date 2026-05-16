@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/event_model.dart';
 import '../../providers/game_provider.dart';
 
@@ -167,8 +168,8 @@ class _EventScreenState extends ConsumerState<EventScreen>
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                       child: Text(
-                        'Choose Your Response:',
-                        style: TextStyle(
+                        context.l10n.chooseYourResponse,
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
                           fontFamily: 'Poppins',
@@ -210,8 +211,8 @@ class _EventScreenState extends ConsumerState<EventScreen>
                                 },
                                 icon: const Icon(Icons.arrow_forward_rounded,
                                     color: AppColors.background, size: 18),
-                                label: const Text(
-                                  'Continue Governing',
+                                label: Text(
+                                  context.l10n.continueGoverning,
                                   style: TextStyle(
                                     color: AppColors.background,
                                     fontFamily: 'Poppins',
@@ -241,8 +242,8 @@ class _EventScreenState extends ConsumerState<EventScreen>
                                 ),
                                 child: Text(
                                   _selectedChoice != null
-                                      ? 'Confirm Decision'
-                                      : 'Select an option first',
+                                      ? context.l10n.confirmDecision
+                                      : context.l10n.selectOptionFirst,
                                   style: TextStyle(
                                     color: _selectedChoice != null
                                         ? AppColors.background

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/game_state_model.dart';
 import '../../widgets/common/stat_card.dart';
 import '../../widgets/dashboard/gdp_chart.dart';
@@ -12,6 +13,7 @@ class OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -43,32 +45,32 @@ class OverviewTab extends StatelessWidget {
                 childAspectRatio: 1.4,
                 children: [
                   StatCard(
-                    label: 'Happiness',
+                    label: l10n.statHappiness,
                     value: '${game.happiness.toStringAsFixed(0)}%',
                     icon: Icons.sentiment_satisfied_rounded,
                     color: AppColors.accent,
                     progress: game.happiness / 100,
                   ),
                   StatCard(
-                    label: 'Stability',
+                    label: l10n.statStability,
                     value: '${game.stability.toStringAsFixed(0)}%',
                     icon: Icons.balance_rounded,
                     color: AppColors.diplomacy,
                     progress: game.stability / 100,
                   ),
                   StatCard(
-                    label: 'GDP Growth',
+                    label: l10n.statGdpGrowth,
                     value: '${game.gdpGrowthRate > 0 ? '+' : ''}${game.gdpGrowthRate.toStringAsFixed(1)}%',
                     icon: Icons.trending_up_rounded,
                     color: game.gdpGrowthRate >= 0 ? AppColors.economy : AppColors.danger,
                     subtitle: game.gdpGrowthRate >= 2
-                        ? 'Booming'
+                        ? l10n.gdpStatusBooming
                         : game.gdpGrowthRate >= 0
-                            ? 'Stable'
-                            : 'Recession',
+                            ? l10n.gdpStatusStable
+                            : l10n.gdpStatusRecession,
                   ),
                   StatCard(
-                    label: 'Corruption',
+                    label: l10n.statCorruption,
                     value: '${game.corruption.toStringAsFixed(0)}%',
                     icon: Icons.warning_amber_rounded,
                     color: game.corruption < 30
@@ -80,6 +82,64 @@ class OverviewTab extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+
+              // War status banner
+              if (game.atWar) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.danger.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_rounded, color: AppColors.danger, size: 16),
+                      const SizedBox(width: 8),
+                      Text(l10n.atWarBadge, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w800, fontSize: 12, fontFamily: 'Poppins', letterSpacing: 1.0)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('Military strength: ${game.militaryStrength.toStringAsFixed(0)}/100 · Troops: ${game.troopCount >= 1000 ? '${(game.troopCount / 1000).toStringAsFixed(1)}M' : '${game.troopCount.toStringAsFixed(0)}K'}',
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontFamily: 'Poppins'),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // Population row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.groups_rounded, color: AppColors.social, size: 16),
+                    const SizedBox(width: 8),
+                    Text(l10n.population, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'Poppins')),
+                    const Spacer(),
+                    Text(
+                      () {
+                        final m = game.populationMillions > 0 ? game.populationMillions : game.country.population / 1e6;
+                        if (m >= 1000) return '${(m / 1000).toStringAsFixed(2)}B';
+                        if (m >= 1) return '${m.toStringAsFixed(1)}M';
+                        return '${(m * 1000).toStringAsFixed(0)}K';
+                      }(),
+                      style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13, fontFamily: 'Poppins'),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.calendar_today_rounded, color: AppColors.textMuted, size: 12),
+                    const SizedBox(width: 4),
+                    Text(l10n.yearsLeft(game.yearsRemaining), style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontFamily: 'Poppins')),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
 
               // GDP + Approval charts side by side
@@ -87,7 +147,7 @@ class OverviewTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MiniChartCard(
-                      title: 'GDP',
+                      title: l10n.statGdp,
                       value: game.gdpBillion >= 1000
                           ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
                           : '\$${game.gdpBillion.toStringAsFixed(0)}B',
@@ -98,7 +158,7 @@ class OverviewTab extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _MiniChartCard(
-                      title: 'Approval',
+                      title: l10n.approval,
                       value: '${game.approvalRating.toStringAsFixed(0)}%',
                       color: AppColors.approvalColor(game.approvalRating),
                       chart: GdpChart(
@@ -122,9 +182,9 @@ class OverviewTab extends StatelessWidget {
 
               // Active Policies
               if (game.activePolicies.isNotEmpty) ...[
-                const Text(
-                  'Active Policies',
-                  style: TextStyle(
+                Text(
+                  l10n.activePolicies,
+                  style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Poppins',
@@ -188,6 +248,7 @@ class _RelationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -198,9 +259,9 @@ class _RelationsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Diplomatic Relations',
-            style: TextStyle(
+          Text(
+            l10n.diplomaticRelations,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontFamily: 'Poppins',
@@ -209,9 +270,9 @@ class _RelationsCard extends StatelessWidget {
           ),
           if (game.alliedCountries.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Allies',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontFamily: 'Poppins'),
+            Text(
+              l10n.allies,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontFamily: 'Poppins'),
             ),
             const SizedBox(height: 5),
             Wrap(
@@ -224,9 +285,9 @@ class _RelationsCard extends StatelessWidget {
           ],
           if (game.sanctionedCountries.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Rivals',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontFamily: 'Poppins'),
+            Text(
+              l10n.rivals,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontFamily: 'Poppins'),
             ),
             const SizedBox(height: 5),
             Wrap(

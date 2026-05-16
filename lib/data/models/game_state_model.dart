@@ -41,6 +41,8 @@ class GameStateModel {
   final double healthcareIndex; // 0–100
   final double literacyRate;
   final double populationMillions; // live population (millions), evolves each year
+  final double healthcareBudget; // extra investment (billion USD/yr)
+  final double educationBudget;  // extra investment (billion USD/yr)
 
   // Diplomatic
   final double diplomaticReputation; // 0–100
@@ -91,6 +93,8 @@ class GameStateModel {
     required this.healthcareIndex,
     required this.literacyRate,
     this.populationMillions = 0.0,
+    this.healthcareBudget = 0.0,
+    this.educationBudget = 0.0,
     required this.diplomaticReputation,
     this.alliedCountries = const [],
     this.sanctionedCountries = const [],
@@ -166,6 +170,8 @@ class GameStateModel {
     double? healthcareIndex,
     double? literacyRate,
     double? populationMillions,
+    double? healthcareBudget,
+    double? educationBudget,
     double? diplomaticReputation,
     List<String>? alliedCountries,
     List<String>? sanctionedCountries,
@@ -204,6 +210,8 @@ class GameStateModel {
       healthcareIndex: healthcareIndex ?? this.healthcareIndex,
       literacyRate: literacyRate ?? this.literacyRate,
       populationMillions: populationMillions ?? this.populationMillions,
+      healthcareBudget: healthcareBudget ?? this.healthcareBudget,
+      educationBudget: educationBudget ?? this.educationBudget,
       diplomaticReputation: diplomaticReputation ?? this.diplomaticReputation,
       alliedCountries: alliedCountries ?? this.alliedCountries,
       sanctionedCountries: sanctionedCountries ?? this.sanctionedCountries,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/buildings_data.dart';
 import '../../../data/models/building_model.dart';
 import '../../../data/models/game_state_model.dart';
@@ -33,11 +34,12 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = ref.watch(gameProvider);
     if (game == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(child: Text('No active game', style: TextStyle(color: AppColors.textMuted))),
+        body: Center(child: Text(l10n.noActiveGame, style: const TextStyle(color: AppColors.textMuted))),
       );
     }
 
@@ -50,9 +52,9 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'Infrastructure',
-          style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 17),
+        title: Text(
+          l10n.infrastructureTitle,
+          style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 17),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textSecondary),
@@ -67,11 +69,11 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: AppColors.accent,
-          tabs: const [
-            Tab(icon: Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFFFD700)), text: 'Energy'),
-            Tab(icon: Icon(Icons.shield_rounded, size: 16, color: Color(0xFFFF5722)), text: 'Military'),
-            Tab(icon: Icon(Icons.restaurant_rounded, size: 16, color: Color(0xFF76C442)), text: 'Food'),
-            Tab(icon: Icon(Icons.terrain_rounded, size: 16, color: Color(0xFFFF6D00)), text: 'Resources'),
+          tabs: [
+            Tab(icon: const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFFFD700)), text: l10n.energyTab),
+            Tab(icon: const Icon(Icons.shield_rounded, size: 16, color: Color(0xFFFF5722)), text: l10n.tabMilitary),
+            Tab(icon: const Icon(Icons.restaurant_rounded, size: 16, color: Color(0xFF76C442)), text: l10n.foodTab),
+            Tab(icon: const Icon(Icons.terrain_rounded, size: 16, color: Color(0xFFFF6D00)), text: l10n.resourcesTab),
           ],
         ),
       ),
@@ -96,20 +98,21 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
   }
 
   void _doBuild(BuildingModel building) {
+    final l10n = context.l10n;
     final game = ref.read(gameProvider);
     if (game == null) return;
 
     final currentLevel = game.buildingLevels[building.id] ?? 0;
 
     if (game.politicalCapital < building.capitalCostPerLevel) {
-      _snack('💎 Not enough Political Capital (need ${building.capitalCostPerLevel}, have ${game.politicalCapital}).', AppColors.danger);
+      _snack(l10n.buildingNotEnoughCapital(building.capitalCostPerLevel, game.politicalCapital), AppColors.danger);
       return;
     }
 
     if (game.treasury < building.moneyCostPerLevel) {
       final needed = building.moneyCostPerLevel.toStringAsFixed(0);
       final have = game.treasury.toStringAsFixed(0);
-      _snack('🪙 Not enough Treasury (need \$$needed B, have \$$have B). Wait for annual income!', AppColors.danger);
+      _snack(l10n.notEnoughTreasury(needed, have), AppColors.danger);
       return;
     }
 
@@ -117,7 +120,7 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
       final levels = game.buildingLevels;
       final available = BuildingsData.calcEnergyCapacity(levels) - BuildingsData.calcEnergyConsumption(levels);
       if (available < building.energyConsumption) {
-        _snack('⚡ Not enough energy (need ${building.energyConsumption.toStringAsFixed(0)} MW, only ${available.toStringAsFixed(0)} MW free). Build more power plants!', AppColors.warning);
+        _snack(l10n.noEnergyWarning(building.energyConsumption.round(), available.round()), AppColors.warning);
         return;
       }
     }
@@ -126,7 +129,7 @@ class _BuildingsScreenState extends ConsumerState<BuildingsScreen>
 
     final isNew = currentLevel == 0;
     _snack(
-      isNew ? '🏗️ ${building.name} built!' : '⬆️ ${building.name} upgraded to Level ${currentLevel + 1}!',
+      isNew ? l10n.buildingBuilt(building.name) : l10n.buildingUpgraded(building.name, currentLevel + 1),
       AppColors.success,
     );
   }
@@ -152,6 +155,7 @@ class _EnergyBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final ratio = capacity > 0 ? (consumption / capacity).clamp(0.0, 1.0) : 0.0;
     final color = ratio > 0.85 ? AppColors.danger : ratio > 0.65 ? AppColors.warning : AppColors.accent;
 
@@ -165,15 +169,15 @@ class _EnergyBar extends StatelessWidget {
             children: [
               const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 14),
               const SizedBox(width: 6),
-              const Text('Power Grid', style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(l10n.powerGrid, style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
               const Spacer(),
               Text(
-                '${consumption.toStringAsFixed(0)} / ${capacity.toStringAsFixed(0)} MW used',
+                l10n.mwUsed(consumption.toStringAsFixed(0), capacity.toStringAsFixed(0)),
                 style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 8),
               Text(
-                '(${available.toStringAsFixed(0)} MW free)',
+                l10n.mwFree(available.toStringAsFixed(0)),
                 style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 10),
               ),
             ],
@@ -210,14 +214,14 @@ class _NoPowerBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 16),
-          SizedBox(width: 8),
+          const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '⚡ No power capacity! Go to the Energy tab and build a power plant first — all other buildings require electricity.',
-              style: TextStyle(color: AppColors.warning, fontFamily: 'Poppins', fontSize: 11, height: 1.4),
+              context.l10n.noPowerCapacity,
+              style: const TextStyle(color: AppColors.warning, fontFamily: 'Poppins', fontSize: 11, height: 1.4),
             ),
           ),
         ],
@@ -254,7 +258,7 @@ class _EnergyChip extends StatelessWidget {
           const Text('⚡', style: TextStyle(fontSize: 11)),
           const SizedBox(width: 3),
           Text(
-            capacity == 0 ? 'No Power' : '${available.toStringAsFixed(0)} MW',
+            capacity == 0 ? context.l10n.noPower : '${available.toStringAsFixed(0)} MW',
             style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700),
           ),
         ],
@@ -390,18 +394,20 @@ class _BuildingCard extends StatelessWidget {
       building.isPowerPlant || currentLevel > 0 || energyAvailable >= building.energyConsumption;
   bool get canBuild => !isMaxLevel && canAffordCapital && canAffordTreasury && hasEnoughEnergy;
 
-  String get _buttonLabel {
-    if (!canAffordCapital) return '💎 Need ${building.capitalCostPerLevel}';
-    if (!canAffordTreasury) return '🪙 Need \$${building.moneyCostPerLevel.toStringAsFixed(0)}B';
+  String _buttonLabel(BuildContext context) {
+    final l10n = context.l10n;
+    if (!canAffordCapital) return l10n.needCapitalForBuilding(building.capitalCostPerLevel);
+    if (!canAffordTreasury) return l10n.needMoneyForBuilding(building.moneyCostPerLevel.toStringAsFixed(0));
     if (!building.isPowerPlant && currentLevel == 0 && !hasEnoughEnergy) {
-      return '⚡ Need ${building.energyConsumption.toStringAsFixed(0)} MW';
+      return l10n.needEnergyForBuilding(building.energyConsumption.toStringAsFixed(0));
     }
-    if (currentLevel == 0) return 'Build';
-    return 'Upgrade → Lv ${currentLevel + 1}';
+    if (currentLevel == 0) return l10n.build;
+    return l10n.upgradeToLevel(currentLevel + 1);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final color = building.categoryColor;
 
     return Container(
@@ -474,7 +480,7 @@ class _BuildingCard extends StatelessWidget {
 
                 // Per-level effects
                 if (building.effectsPerLevel.isNotEmpty) ...[
-                  const Text('Bonus per level / year:', style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Poppins')),
+                  Text(l10n.bonusPerLevel, style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontFamily: 'Poppins')),
                   const SizedBox(height: 5),
                   Wrap(
                     spacing: 5,
@@ -490,7 +496,10 @@ class _BuildingCard extends StatelessWidget {
                     const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 13),
                     const SizedBox(width: 4),
                     Text(
-                      'Generates +${building.energyProductionPerLevel.toStringAsFixed(0)} MW per level  •  Max ${building.maxLevel} levels',
+                      l10n.generatesEnergyPerLevel(
+                        building.energyProductionPerLevel.toStringAsFixed(0),
+                        building.maxLevel.toString(),
+                      ),
                       style: const TextStyle(color: AppColors.accent, fontSize: 11, fontFamily: 'Poppins'),
                     ),
                   ]),
@@ -500,7 +509,9 @@ class _BuildingCard extends StatelessWidget {
                     Icon(Icons.bolt_rounded, color: isBuilt ? AppColors.warning : AppColors.textMuted, size: 13),
                     const SizedBox(width: 4),
                     Text(
-                      'Requires ${building.energyConsumption.toStringAsFixed(0)} MW to operate${isBuilt ? '' : '  •  not yet built'}',
+                      isBuilt
+                          ? l10n.requiresEnergyActive(building.energyConsumption.toStringAsFixed(0))
+                          : l10n.requiresEnergyInactive(building.energyConsumption.toStringAsFixed(0)),
                       style: TextStyle(
                         color: isBuilt ? AppColors.warning : AppColors.textMuted,
                         fontSize: 11,
@@ -532,7 +543,7 @@ class _BuildingCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '✓ Max Level',
+                          '✓ ${l10n.maxLevel}',
                           style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       )
@@ -548,7 +559,7 @@ class _BuildingCard extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: Text(
-                          _buttonLabel,
+                          _buttonLabel(context),
                           style: TextStyle(
                             color: canBuild ? Colors.white : AppColors.textMuted,
                             fontSize: 12,
@@ -580,6 +591,7 @@ class _LevelBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       children: [
         ...List.generate(maxLevel, (i) => Padding(
@@ -595,7 +607,7 @@ class _LevelBar extends StatelessWidget {
         )),
         const SizedBox(width: 5),
         Text(
-          level == 0 ? 'Not Built' : 'Lv $level / $maxLevel',
+          level == 0 ? l10n.notBuiltLabel : l10n.levelProgress(level, maxLevel),
           style: TextStyle(
             color: level == 0 ? AppColors.textMuted : color,
             fontSize: 9,

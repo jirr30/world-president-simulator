@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../services/game_save_service.dart';
 import '../../providers/game_provider.dart';
+import '../../providers/locale_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -39,23 +41,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Start New Game?',
-            style: TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700),
+          title: Text(
+            context.l10n.startNewGameTitle,
+            style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontWeight: FontWeight.w700),
           ),
-          content: const Text(
-            'Your saved progress will be overwritten when you start a new game.',
-            style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 14),
+          content: Text(
+            context.l10n.startNewGameContent,
+            style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(context.l10n.cancel, style: const TextStyle(color: AppColors.textSecondary)),
             ),
             ElevatedButton(
               onPressed: () { Navigator.pop(context); context.go('/select'); },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('New Game', style: TextStyle(color: AppColors.background)),
+              child: Text(context.l10n.newGame, style: const TextStyle(color: AppColors.background)),
             ),
           ],
         ),
@@ -79,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -114,122 +117,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           // Main landscape layout
           SafeArea(
-            child: Row(
+            child: Stack(
               children: [
-                // Left: branding
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('🌍', style: TextStyle(fontSize: 44)),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'World President\nSimulator',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Poppins',
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Lead any of 100+ real nations.\nShape history. Leave a legacy.',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                            fontFamily: 'Poppins',
-                            height: 1.5,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                Row(
+                  children: [
+                    // Left: branding
+                    Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(32, 24, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _FeatureChip(label: '195 Countries', icon: '🌐'),
-                            _FeatureChip(label: 'Real Data', icon: '📊'),
-                            _FeatureChip(label: 'Live Events', icon: '⚡'),
-                            _FeatureChip(label: 'Auto-Save', icon: '💾'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Divider
-                Container(
-                  width: 1,
-                  margin: const EdgeInsets.symmetric(vertical: 24),
-                  color: AppColors.cardBorder,
-                ),
-                // Right: buttons
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 32, 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_saveChecked && _hasSave) ...[
-                          _ActionButton(
-                            label: 'Continue Game',
-                            icon: Icons.play_circle_fill_rounded,
-                            color: AppColors.primary,
-                            onTap: _continueSave,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        _ActionButton(
-                          label: 'New Game',
-                          icon: Icons.add_circle_rounded,
-                          color: AppColors.accent,
-                          onTap: _startNewGame,
-                        ),
-                        const SizedBox(height: 12),
-                        _ActionButton(
-                          label: 'How to Play',
-                          icon: Icons.help_outline_rounded,
-                          color: AppColors.diplomacy,
-                          onTap: _showHowToPlay,
-                          outlined: true,
-                        ),
-                        if (_saveChecked && _hasSave) ...[
-                          const SizedBox(height: 16),
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.save_rounded, size: 12, color: AppColors.primary),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Saved game found',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ],
+                            const Text('🌍', style: TextStyle(fontSize: 44)),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.appTagline1,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'Poppins',
+                                height: 1.2,
                               ),
                             ),
-                          ),
-                        ],
-                      ],
+                            const SizedBox(height: 10),
+                            Text(
+                              l10n.appTagline2,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                                fontFamily: 'Poppins',
+                                height: 1.5,
+                              ),
+                            ),
+                            const Spacer(),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _FeatureChip(label: l10n.featureCountries, icon: '🌐'),
+                                _FeatureChip(label: l10n.featureRealData, icon: '📊'),
+                                _FeatureChip(label: l10n.featureLiveEvents, icon: '⚡'),
+                                _FeatureChip(label: l10n.featureAutoSave, icon: '💾'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    // Divider
+                    Container(
+                      width: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 24),
+                      color: AppColors.cardBorder,
+                    ),
+                    // Right: buttons
+                    Expanded(
+                      flex: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 32, 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_saveChecked && _hasSave) ...[
+                              _ActionButton(
+                                label: l10n.continueGame,
+                                icon: Icons.play_circle_fill_rounded,
+                                color: AppColors.primary,
+                                onTap: _continueSave,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            _ActionButton(
+                              label: l10n.newGame,
+                              icon: Icons.add_circle_rounded,
+                              color: AppColors.accent,
+                              onTap: _startNewGame,
+                            ),
+                            const SizedBox(height: 12),
+                            _ActionButton(
+                              label: l10n.howToPlay,
+                              icon: Icons.help_outline_rounded,
+                              color: AppColors.diplomacy,
+                              onTap: _showHowToPlay,
+                              outlined: true,
+                            ),
+                            if (_saveChecked && _hasSave) ...[
+                              const SizedBox(height: 16),
+                              Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.save_rounded, size: 12, color: AppColors.primary),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        l10n.savedGameFound,
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 11,
+                                          fontFamily: 'Poppins',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // Language toggle — top right corner
+                Positioned(
+                  top: 8,
+                  right: 12,
+                  child: _LanguageToggle(),
                 ),
               ],
             ),
@@ -324,13 +337,14 @@ class _HowToPlaySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const steps = [
-      ('🌍', 'Choose Your Country', 'Pick from 195 real nations with actual economic and military data.'),
-      ('📋', 'Apply Policies', 'Choose economic, military, social, or diplomatic policies each term.'),
-      ('⚡', 'Handle Events', 'Random world events will challenge your leadership. Choose wisely.'),
-      ('📅', 'Advance Year', 'Each year your decisions affect your approval rating and country stats.'),
-      ('💾', 'Auto-Save', 'Progress is saved automatically. Leave and continue anytime.'),
-      ('🏆', 'Leave a Legacy', 'Survive your full term and be judged by history after 5 years.'),
+    final l10n = context.l10n;
+    final steps = [
+      ('🌍', l10n.howToPlay1Title, l10n.howToPlay1Desc),
+      ('📋', l10n.howToPlay2Title, l10n.howToPlay2Desc),
+      ('⚡', l10n.howToPlay3Title, l10n.howToPlay3Desc),
+      ('📅', l10n.howToPlay4Title, l10n.howToPlay4Desc),
+      ('💾', l10n.howToPlay5Title, l10n.howToPlay5Desc),
+      ('🏆', l10n.howToPlay6Title, l10n.howToPlay6Desc),
     ];
 
     return DraggableScrollableSheet(
@@ -352,9 +366,9 @@ class _HowToPlaySheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'How to Play',
-            style: TextStyle(
+          Text(
+            l10n.howToPlay,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -398,6 +412,47 @@ class _HowToPlaySheet extends StatelessWidget {
             ),
           )),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Language toggle ──────────────────────────────────────────────────────────
+
+class _LanguageToggle extends ConsumerWidget {
+  const _LanguageToggle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    final isEn = locale.languageCode == 'en';
+    return GestureDetector(
+      onTap: () => ref.read(localeProvider.notifier).setLocale(
+            isEn ? const Locale('id') : const Locale('en'),
+          ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(isEn ? '🇬🇧' : '🇮🇩', style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 5),
+            Text(
+              isEn ? 'EN' : 'ID',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

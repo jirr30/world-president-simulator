@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/datasources/policies_data.dart';
 import '../../../data/models/policy_model.dart';
 import '../../providers/game_provider.dart';
@@ -31,13 +32,14 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = ref.watch(gameProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: const Text('Policies'),
+        title: Text(l10n.policies),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.go('/dashboard'),
@@ -102,11 +104,11 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
         ],
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [
-            Tab(icon: Icon(Icons.trending_up_rounded, color: AppColors.economy, size: 18), text: 'Economic'),
-            Tab(icon: Icon(Icons.shield_rounded, color: AppColors.military, size: 18), text: 'Military'),
-            Tab(icon: Icon(Icons.people_rounded, color: AppColors.social, size: 18), text: 'Social'),
-            Tab(icon: Icon(Icons.public_rounded, color: AppColors.diplomacy, size: 18), text: 'Diplomatic'),
+          tabs: [
+            Tab(icon: const Icon(Icons.trending_up_rounded, color: AppColors.economy, size: 18), text: l10n.economicTab),
+            Tab(icon: const Icon(Icons.shield_rounded, color: AppColors.military, size: 18), text: l10n.tabMilitary),
+            Tab(icon: const Icon(Icons.people_rounded, color: AppColors.social, size: 18), text: l10n.tabSocial),
+            Tab(icon: const Icon(Icons.public_rounded, color: AppColors.diplomacy, size: 18), text: l10n.diplomaticTab),
           ],
         ),
       ),
@@ -123,12 +125,13 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
   }
 
   void _applyPolicy(PolicyModel policy) {
+    final l10n = context.l10n;
     final game = ref.read(gameProvider);
     if (game == null) return;
 
     if (game.politicalCapital < policy.capitalCost) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('💎 Not enough Political Capital (need ${policy.capitalCost}, have ${game.politicalCapital}).', style: const TextStyle(fontFamily: 'Poppins')),
+        content: Text(l10n.policyNotEnoughCapital(policy.capitalCost, game.politicalCapital), style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.danger,
       ));
       return;
@@ -136,7 +139,7 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
 
     if (game.approvalRating < policy.minApprovalToApply) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('You need at least ${policy.minApprovalToApply}% approval to apply this policy.', style: const TextStyle(fontFamily: 'Poppins')),
+        content: Text(l10n.notEnoughApproval(policy.minApprovalToApply), style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.danger,
       ));
       return;
@@ -144,7 +147,7 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
 
     if (game.activePolicies.any((p) => p.id == policy.id)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${policy.name} is already active.', style: const TextStyle(fontFamily: 'Poppins')),
+        content: Text(l10n.policyAlreadyActive(policy.name), style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.warning,
       ));
       return;
@@ -152,44 +155,45 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
 
     ref.read(gameProvider.notifier).applyPolicy(policy);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('✅ ${policy.name} has been applied!', style: const TextStyle(fontFamily: 'Poppins')),
+      content: Text('✅ ${l10n.policyApplied(policy.name)}', style: const TextStyle(fontFamily: 'Poppins')),
       backgroundColor: AppColors.success,
       duration: const Duration(seconds: 2),
     ));
   }
 
   void _cancelPolicy(PolicyModel policy) {
+    final l10n = context.l10n;
     final refund = (policy.capitalCost * 0.5).ceil();
     showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Revoke "${policy.name}"?',
+        title: Text(l10n.revokePolicy(policy.name),
             style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Revoking this policy will:',
-              style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13),
+            Text(
+              l10n.revokeDescription,
+              style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 13),
             ),
             const SizedBox(height: 10),
-            _RevokePoint('Stop the annual cost drain', AppColors.economy, Icons.savings_rounded),
-            _RevokePoint('Partially reverse effects (40%)', AppColors.warning, Icons.undo_rounded),
-            _RevokePoint('Refund $refund 💎 Political Capital', AppColors.accent, Icons.diamond_rounded),
+            _RevokePoint(l10n.revokeCostDrain, AppColors.economy, Icons.savings_rounded),
+            _RevokePoint(l10n.revokeEffectsReversal, AppColors.warning, Icons.undo_rounded),
+            _RevokePoint(l10n.revokeRefund(refund), AppColors.accent, Icons.diamond_rounded),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
+            child: Text(l10n.cancel, style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Revoke Policy', style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            child: Text(l10n.revokePolicyButton, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -197,7 +201,7 @@ class _PolicyScreenState extends ConsumerState<PolicyScreen>
       if (confirmed != true || !mounted) return;
       ref.read(gameProvider.notifier).removePolicy(policy.id);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('🗑 ${policy.name} revoked. +$refund 💎 refunded.', style: const TextStyle(fontFamily: 'Poppins')),
+        content: Text('🗑 ${context.l10n.revokeSuccess(policy.name, refund)}', style: const TextStyle(fontFamily: 'Poppins')),
         backgroundColor: AppColors.warning,
         duration: const Duration(seconds: 2),
       ));
@@ -263,6 +267,7 @@ class _PolicyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -276,7 +281,6 @@ class _PolicyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             decoration: BoxDecoration(
@@ -312,9 +316,9 @@ class _PolicyCard extends StatelessWidget {
                       color: AppColors.economy.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
-                      'Active',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.policyActive,
+                      style: const TextStyle(
                         color: AppColors.economy,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -325,7 +329,6 @@ class _PolicyCard extends StatelessWidget {
               ],
             ),
           ),
-          // Body
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
             child: Column(
@@ -341,7 +344,6 @@ class _PolicyCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Effects
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
@@ -366,7 +368,6 @@ class _PolicyCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    // Capital cost badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -438,12 +439,12 @@ class _PolicyCard extends StatelessWidget {
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.cancel_outlined, color: AppColors.danger, size: 13),
-                              SizedBox(width: 4),
+                            children: [
+                              const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 13),
+                              const SizedBox(width: 4),
                               Text(
-                                'Revoke',
-                                style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
+                                l10n.revokeButton,
+                                style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Poppins'),
                               ),
                             ],
                           ),
@@ -461,7 +462,7 @@ class _PolicyCard extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: Text(
-                          canAfford ? 'Apply' : 'Need 💎${policy.capitalCost}',
+                          canAfford ? l10n.applyButton : l10n.needCapitalButton(policy.capitalCost),
                           style: TextStyle(
                             color: canAfford ? Colors.white : AppColors.textMuted,
                             fontSize: 12,

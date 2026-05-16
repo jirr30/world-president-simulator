@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,9 +70,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                   ),
                   const SizedBox(height: 28),
-                  const Text(
-                    'WORLD PRESIDENT',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.splashTitle,
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
@@ -80,9 +81,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'SIMULATOR',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.splashSubtitle,
+                    style: const TextStyle(
                       color: AppColors.accent,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

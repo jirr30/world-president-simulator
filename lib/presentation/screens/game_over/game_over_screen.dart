@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../providers/game_provider.dart';
 import '../../widgets/common/approval_bar.dart';
 import '../../widgets/common/country_flag.dart';
@@ -85,7 +86,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       Text(emoji, style: const TextStyle(fontSize: 56)),
                       const SizedBox(height: 12),
                       Text(
-                        isImpeached ? 'IMPEACHED' : 'TERM ENDED',
+                        isImpeached ? context.l10n.impeachedBadge : context.l10n.termEndedBadge,
                         style: TextStyle(
                           color: isImpeached ? AppColors.danger : AppColors.textMuted,
                           fontSize: 10,
@@ -96,7 +97,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isImpeached ? 'Removed from Power' : legacy,
+                        isImpeached ? context.l10n.removedFromPower : legacy,
                         style: TextStyle(
                           color: approvalColor,
                           fontSize: 18,
@@ -140,7 +141,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                       ApprovalBar(approval: avgApproval),
                       const SizedBox(height: 4),
                       Text(
-                        'Avg. approval: ${avgApproval.toStringAsFixed(0)}%',
+                        context.l10n.avgApprovalStat(avgApproval.toStringAsFixed(0)),
                         style: TextStyle(
                           color: approvalColor,
                           fontSize: 11,
@@ -159,7 +160,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                           },
                           icon: const Icon(Icons.refresh_rounded,
                               color: AppColors.background, size: 16),
-                          label: const Text('Play Again',
+                          label: Text(context.l10n.playAgain,
                               style: TextStyle(
                                   color: AppColors.background,
                                   fontFamily: 'Poppins',
@@ -182,7 +183,7 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                             context.go('/home');
                           },
                           icon: const Icon(Icons.home_rounded, size: 16),
-                          label: const Text('Main Menu',
+                          label: Text(context.l10n.mainMenu,
                               style: TextStyle(
                                   fontFamily: 'Poppins', fontSize: 14)),
                           style: OutlinedButton.styleFrom(
@@ -208,9 +209,9 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                   children: [
-                    const Text(
-                      'Final Report',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.finalReport,
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -220,39 +221,39 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                     const SizedBox(height: 12),
                     // Stats 2-col grid
                     _StatGrid([
-                      _StatDef('Avg Approval',
+                      _StatDef(context.l10n.avgApproval,
                           '${avgApproval.toStringAsFixed(0)}%',
                           Icons.thumb_up_rounded, approvalColor),
-                      _StatDef('Final GDP',
+                      _StatDef(context.l10n.finalGdp,
                           game.gdpBillion >= 1000
                               ? '\$${(game.gdpBillion / 1000).toStringAsFixed(1)}T'
                               : '\$${game.gdpBillion.toStringAsFixed(0)}B',
                           Icons.trending_up_rounded, AppColors.economy),
-                      _StatDef('GDP Growth',
+                      _StatDef(context.l10n.statGdpGrowth,
                           '${game.gdpGrowthRate > 0 ? '+' : ''}${game.gdpGrowthRate.toStringAsFixed(1)}%',
                           Icons.bar_chart_rounded, AppColors.economy),
-                      _StatDef('Happiness',
+                      _StatDef(context.l10n.statHappiness,
                           '${game.happiness.toStringAsFixed(0)}%',
                           Icons.sentiment_satisfied_rounded, AppColors.accent),
-                      _StatDef('Military',
+                      _StatDef(context.l10n.militaryStat,
                           '${game.militaryStrength.toStringAsFixed(0)}/100',
                           Icons.shield_rounded, AppColors.military),
-                      _StatDef('Diplomacy',
+                      _StatDef(context.l10n.diplomacy,
                           '${game.diplomaticReputation.toStringAsFixed(0)}/100',
                           Icons.public_rounded, AppColors.diplomacy),
-                      _StatDef('Education',
+                      _StatDef(context.l10n.education,
                           '${game.educationIndex.toStringAsFixed(0)}/100',
                           Icons.school_rounded, AppColors.social),
-                      _StatDef('National Debt',
+                      _StatDef(context.l10n.nationalDebt,
                           '${game.nationalDebt.toStringAsFixed(0)}% GDP',
                           Icons.account_balance_rounded,
                           game.nationalDebt > 80
                               ? AppColors.danger
                               : AppColors.economy),
-                      _StatDef('Policies Applied',
+                      _StatDef(context.l10n.policiesApplied,
                           '${game.activePolicies.length}',
                           Icons.policy_rounded, AppColors.info),
-                      _StatDef('Years in Power',
+                      _StatDef(context.l10n.yearsInPower,
                           '${game.yearsInOffice}',
                           Icons.calendar_today_rounded, AppColors.textSecondary),
                     ]),
@@ -273,8 +274,8 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                               Icon(Icons.history_edu_rounded,
                                   color: approvalColor, size: 16),
                               const SizedBox(width: 6),
-                              const Text(
-                                'Historical Verdict',
+                              Text(
+                                context.l10n.historicalVerdict,
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
@@ -287,8 +288,8 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
                           const SizedBox(height: 8),
                           Text(
                             isImpeached
-                                ? _impeachmentText(game.approvalRating, game.country.name)
-                                : _verdictText(avgApproval, game.country.name),
+                                ? _impeachmentText(context, game.approvalRating, game.country.name)
+                                : _verdictText(context, avgApproval, game.country.name),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -318,28 +319,20 @@ class _GameOverScreenState extends ConsumerState<GameOverScreen>
     return '💀';
   }
 
-  String _impeachmentText(double approval, String countryName) {
-    if (approval <= 5) {
-      return 'With approval at a catastrophic low, the people of $countryName took to the streets. Parliament voted unanimously to remove you. You will be remembered as the worst leader in the nation\'s history.';
-    } else if (approval <= 10) {
-      return 'Mass protests and a parliamentary vote forced you out of office. Your policies failed the people of $countryName and history will not be kind to your legacy.';
-    } else {
-      return 'Public trust collapsed beyond recovery. Facing impeachment proceedings in parliament, you were removed from office. $countryName moves forward without you.';
-    }
+  String _impeachmentText(BuildContext context, double approval, String countryName) {
+    final l10n = context.l10n;
+    if (approval <= 5) return l10n.impeachText1(countryName);
+    if (approval <= 10) return l10n.impeachText2(countryName);
+    return l10n.impeachText3(countryName);
   }
 
-  String _verdictText(double approval, String countryName) {
-    if (approval >= 80) {
-      return 'History will remember your leadership with great admiration. You transformed $countryName into a beacon of prosperity and stability.';
-    } else if (approval >= 65) {
-      return 'You led $countryName competently and are well-regarded by your citizens. Your tenure saw genuine progress in key areas.';
-    } else if (approval >= 50) {
-      return 'Your time as leader of $countryName was mixed. While you maintained stability, many citizens felt more could have been accomplished.';
-    } else if (approval >= 35) {
-      return 'Your leadership divided the nation. Significant opposition marked your term. $countryName faced considerable challenges under your governance.';
-    } else {
-      return 'Your term as leader of $countryName will be remembered as a turbulent period. Institutions weakened and the country\'s reputation declined.';
-    }
+  String _verdictText(BuildContext context, double approval, String countryName) {
+    final l10n = context.l10n;
+    if (approval >= 80) return l10n.verdictGreat(countryName);
+    if (approval >= 65) return l10n.verdictGood(countryName);
+    if (approval >= 50) return l10n.verdictAverage(countryName);
+    if (approval >= 35) return l10n.verdictPoor(countryName);
+    return l10n.verdictBad(countryName);
   }
 }
 

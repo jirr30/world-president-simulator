@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/country_model.dart';
 import '../../providers/country_provider.dart';
 import '../../providers/game_provider.dart';
@@ -25,6 +26,7 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final countries = ref.watch(filteredCountriesProvider);
     final continents = ref.watch(continentsProvider);
     final selectedContinent = ref.watch(selectedContinentProvider);
@@ -43,7 +45,6 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                       child: Row(
@@ -56,9 +57,9 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                             constraints: const BoxConstraints(),
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Select Country',
-                            style: TextStyle(
+                          Text(
+                            l10n.selectCountry,
+                            style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -68,13 +69,12 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                         ],
                       ),
                     ),
-                    // Search bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: TextField(
                         controller: _searchCtrl,
                         decoration: InputDecoration(
-                          hintText: 'Search...',
+                          hintText: l10n.searchHint,
                           prefixIcon: const Icon(Icons.search_rounded,
                               color: AppColors.textMuted, size: 18),
                           contentPadding:
@@ -103,12 +103,11 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                             ref.read(searchQueryProvider.notifier).state = v,
                       ),
                     ),
-                    // Continent filter label
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(12, 6, 12, 4),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                       child: Text(
-                        'CONTINENT',
-                        style: TextStyle(
+                        l10n.continentLabel,
+                        style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -117,7 +116,6 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                         ),
                       ),
                     ),
-                    // Scrollable continent buttons — won't overflow on short screens
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -125,7 +123,7 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _ContinentButton(
-                              label: 'All Regions',
+                              label: l10n.allRegions,
                               icon: Icons.public_rounded,
                               selected: selectedContinent == null,
                               color: AppColors.textSecondary,
@@ -150,11 +148,10 @@ class _CountrySelectScreenState extends ConsumerState<CountrySelectScreen> {
                         ),
                       ),
                     ),
-                    // Footer count
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(
-                        '${countries.length} countries found',
+                        l10n.countriesFound(countries.length),
                         style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11,
@@ -375,6 +372,7 @@ class _CountryPreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -390,13 +388,10 @@ class _CountryPreviewDialog extends StatelessWidget {
                 width: 200,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primaryDark,
-                      AppColors.surface,
-                    ],
+                    colors: [AppColors.primaryDark, AppColors.surface],
                   ),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
@@ -457,9 +452,9 @@ class _CountryPreviewDialog extends StatelessWidget {
                         },
                         icon: const Icon(Icons.play_arrow_rounded,
                             color: AppColors.background, size: 18),
-                        label: const Text(
-                          'Lead Nation',
-                          style: TextStyle(
+                        label: Text(
+                          l10n.leadNation,
+                          style: const TextStyle(
                             color: AppColors.background,
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w700,
@@ -479,9 +474,9 @@ class _CountryPreviewDialog extends StatelessWidget {
                       width: double.infinity,
                       child: TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.cancel,
+                          style: const TextStyle(
                             color: AppColors.textMuted,
                             fontFamily: 'Poppins',
                             fontSize: 13,
@@ -500,9 +495,9 @@ class _CountryPreviewDialog extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Country Profile',
-                        style: TextStyle(
+                      Text(
+                        l10n.countryProfile,
+                        style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -510,39 +505,38 @@ class _CountryPreviewDialog extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      // Stats grid (2 per row)
                       _StatGrid([
-                        _StatItem('Population', country.populationFormatted,
+                        _StatItem(l10n.population, country.populationFormatted,
                             Icons.people_rounded, AppColors.social),
-                        _StatItem('GDP', country.gdpFormatted,
+                        _StatItem(l10n.statGdp, country.gdpFormatted,
                             Icons.trending_up_rounded, AppColors.economy),
                         _StatItem(
-                            'GDP per Capita',
+                            l10n.gdpPerCapita,
                             '\$${country.gdpPerCapita.toStringAsFixed(0)}',
                             Icons.person_rounded,
                             AppColors.economy),
                         _StatItem(
-                            'Military Budget',
+                            l10n.militaryBudget,
                             '\$${country.militaryBudgetBillion.toStringAsFixed(1)}B',
                             Icons.shield_rounded,
                             AppColors.military),
                         _StatItem(
-                            'HDI',
+                            l10n.hdi,
                             country.humanDevelopmentIndex.toStringAsFixed(3),
                             Icons.bar_chart_rounded,
                             AppColors.diplomacy),
                         _StatItem(
-                            'Literacy Rate',
+                            l10n.literacyRate,
                             '${country.literacyRate.toStringAsFixed(0)}%',
                             Icons.school_rounded,
                             AppColors.social),
                         _StatItem(
-                            'Unemployment',
+                            l10n.unemployment,
                             '${country.unemploymentRate.toStringAsFixed(1)}%',
                             Icons.work_off_rounded,
                             AppColors.warning),
                         _StatItem(
-                            'Corruption Index',
+                            l10n.corruptionIndex,
                             '${country.corruptionIndex.toStringAsFixed(0)}/100',
                             Icons.warning_amber_rounded,
                             country.corruptionIndex < 40
@@ -553,9 +547,9 @@ class _CountryPreviewDialog extends StatelessWidget {
                         const SizedBox(height: 14),
                         const Divider(color: AppColors.cardBorder),
                         const SizedBox(height: 10),
-                        const Text(
-                          'Natural Allies',
-                          style: TextStyle(
+                        Text(
+                          l10n.naturalAllies,
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 11,
                             fontFamily: 'Poppins',

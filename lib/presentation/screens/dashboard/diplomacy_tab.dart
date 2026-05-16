@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../data/models/game_state_model.dart';
 import '../../../data/models/country_model.dart';
 import '../../../data/datasources/countries_data.dart';
@@ -23,12 +24,12 @@ extension _RelX on _Rel {
         _Rel.nativeRival => AppColors.danger,
       };
 
-  String get label => switch (this) {
-        _Rel.playerAlly => 'Allied',
-        _Rel.nativeAlly => 'Historic Ally',
-        _Rel.neutral => 'Neutral',
-        _Rel.playerSanctioned => 'Sanctioned',
-        _Rel.nativeRival => 'Historic Rival',
+  String label(AppLocalizations l10n) => switch (this) {
+        _Rel.playerAlly => l10n.alliedRelLabel,
+        _Rel.nativeAlly => l10n.historicAlly,
+        _Rel.neutral => l10n.neutral,
+        _Rel.playerSanctioned => l10n.sanctioned,
+        _Rel.nativeRival => l10n.historicRival,
       };
 
   bool get isAlly => this == _Rel.playerAlly || this == _Rel.nativeAlly;
@@ -74,7 +75,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
 
   GameStateModel get _live => ref.read(gameProvider) ?? widget.game;
 
-  // Compute relation for a country given live game state
   static _Rel _rel(CountryModel c, GameStateModel g) {
     if (g.alliedCountries.contains(c.name)) return _Rel.playerAlly;
     if (g.country.allies.contains(c.name)) return _Rel.nativeAlly;
@@ -83,7 +83,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
     return _Rel.neutral;
   }
 
-  // Build sorted + filtered browse list
   List<(CountryModel, _Rel)> _buildList(GameStateModel game) {
     final q = _query.toLowerCase();
     return CountriesData.all
@@ -105,8 +104,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
       });
   }
 
-  // ── Snackbar helper ─────────────────────────────────────────────────────────
-
   void _snack(String msg, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -115,8 +112,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
       duration: const Duration(seconds: 2),
     ));
   }
-
-  // ── Confirmation bottom sheet ────────────────────────────────────────────────
 
   Future<bool> _confirm({
     required String title,
@@ -144,133 +139,127 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
     return result == true;
   }
 
-  // ── Action handlers ──────────────────────────────────────────────────────────
-
   Future<void> _handleAlly(CountryModel c) async {
+    final l10n = context.l10n;
     final game = _live;
-    final repOk = game.diplomaticReputation >= 30;
-
-    if (!repOk) {
-      _snack('Diplomatic reputation too low (need ≥30 to form alliances).', AppColors.danger);
+    if (game.diplomaticReputation < 30) {
+      _snack(l10n.repTooLow, AppColors.danger);
       return;
     }
     if (game.politicalCapital < SimulationEngine.allianceCost) {
-      _snack('💎 Not enough Political Capital (need ${SimulationEngine.allianceCost}).', AppColors.danger);
+      _snack(l10n.notEnoughCapitalDiplo(SimulationEngine.allianceCost), AppColors.danger);
       return;
     }
-
     final ok = await _confirm(
-      title: 'Form Alliance with ${c.name}?',
+      title: l10n.confirmFormAlliance(c.name),
       flag: c.flag,
       subtitle: '${c.name} · ${c.continent}',
       costItems: [
-        _ConfirmItem('💎 ${SimulationEngine.allianceCost} Political Capital', AppColors.danger, Icons.diamond_rounded),
+        _ConfirmItem('💎 ${SimulationEngine.allianceCost} ${l10n.politicalCapital}', AppColors.danger, Icons.diamond_rounded),
       ],
       effectItems: [
-        _ConfirmItem('+6 Diplomatic Reputation', AppColors.diplomacy, Icons.public_rounded),
-        _ConfirmItem('+0.4% GDP Growth per year', AppColors.economy, Icons.trending_up_rounded),
-        _ConfirmItem('+2 Happiness', AppColors.accent, Icons.sentiment_satisfied_rounded),
-        _ConfirmItem('+1.5 Stability per year', AppColors.diplomacy, Icons.balance_rounded),
-        _ConfirmItem('+0.1% GDP/yr bonus per total ally', AppColors.economy, Icons.handshake_rounded),
+        _ConfirmItem(l10n.allianceRepEffect, AppColors.diplomacy, Icons.public_rounded),
+        _ConfirmItem(l10n.allianceGdpYearEffect, AppColors.economy, Icons.trending_up_rounded),
+        _ConfirmItem(l10n.allianceHappinessEffect, AppColors.accent, Icons.sentiment_satisfied_rounded),
+        _ConfirmItem(l10n.allianceStabilityEffect, AppColors.diplomacy, Icons.balance_rounded),
+        _ConfirmItem(l10n.alliancePerAllyBonus, AppColors.economy, Icons.handshake_rounded),
       ],
-      confirmLabel: 'Form Alliance',
+      confirmLabel: l10n.formAlliance,
       confirmColor: AppColors.economy,
     );
     if (!ok || !mounted) return;
     ref.read(gameProvider.notifier).proposeAlliance(c.name);
-    _snack('🤝 Alliance formed with ${c.name}!', AppColors.economy);
+    _snack(l10n.allianceFormedMsg(c.name), AppColors.economy);
   }
 
   Future<void> _handleBreak(CountryModel c) async {
+    final l10n = context.l10n;
     final game = _live;
     if (game.politicalCapital < SimulationEngine.breakCost) {
-      _snack('💎 Not enough Political Capital (need ${SimulationEngine.breakCost}).', AppColors.danger);
+      _snack(l10n.notEnoughCapitalDiplo(SimulationEngine.breakCost), AppColors.danger);
       return;
     }
-
     final ok = await _confirm(
-      title: 'Break Alliance with ${c.name}?',
+      title: l10n.confirmBreakAlliance(c.name),
       flag: c.flag,
       subtitle: '${c.name} · ${c.continent}',
       costItems: [
-        _ConfirmItem('💎 ${SimulationEngine.breakCost} Political Capital', AppColors.danger, Icons.diamond_rounded),
+        _ConfirmItem('💎 ${SimulationEngine.breakCost} ${l10n.politicalCapital}', AppColors.danger, Icons.diamond_rounded),
       ],
       effectItems: [
-        _ConfirmItem('-8 Diplomatic Reputation', AppColors.danger, Icons.public_rounded),
-        _ConfirmItem('-0.3% GDP Growth', AppColors.danger, Icons.trending_down_rounded),
-        _ConfirmItem('Lose ongoing alliance GDP bonus', AppColors.warning, Icons.money_off_rounded),
+        _ConfirmItem(l10n.breakRepEffect, AppColors.danger, Icons.public_rounded),
+        _ConfirmItem(l10n.breakGdpEffect, AppColors.danger, Icons.trending_down_rounded),
+        _ConfirmItem(l10n.breakGdpBonusEffect, AppColors.warning, Icons.money_off_rounded),
       ],
-      confirmLabel: 'Break Alliance',
+      confirmLabel: l10n.breakAlliance,
       confirmColor: AppColors.warning,
     );
     if (!ok || !mounted) return;
     ref.read(gameProvider.notifier).breakAlliance(c.name);
-    _snack('✂️ Alliance with ${c.name} ended.', AppColors.warning);
+    _snack(l10n.allianceEndedMsg(c.name), AppColors.warning);
   }
 
   Future<void> _handleSanction(CountryModel c) async {
+    final l10n = context.l10n;
     final game = _live;
     if (game.politicalCapital < SimulationEngine.sanctionCost) {
-      _snack('💎 Not enough Political Capital (need ${SimulationEngine.sanctionCost}).', AppColors.danger);
+      _snack(l10n.notEnoughCapitalDiplo(SimulationEngine.sanctionCost), AppColors.danger);
       return;
     }
-
     final ok = await _confirm(
-      title: 'Impose Sanctions on ${c.name}?',
+      title: l10n.confirmSanction(c.name),
       flag: c.flag,
       subtitle: '${c.name} · ${c.continent}',
       costItems: [
-        _ConfirmItem('💎 ${SimulationEngine.sanctionCost} Political Capital', AppColors.danger, Icons.diamond_rounded),
+        _ConfirmItem('💎 ${SimulationEngine.sanctionCost} ${l10n.politicalCapital}', AppColors.danger, Icons.diamond_rounded),
       ],
       effectItems: [
-        _ConfirmItem('-4 Diplomatic Reputation', AppColors.danger, Icons.public_rounded),
-        _ConfirmItem('-0.05% GDP Growth per sanctioned country/yr', AppColors.danger, Icons.trending_down_rounded),
-        _ConfirmItem('Stops ongoing trade benefits', AppColors.warning, Icons.block_rounded),
+        _ConfirmItem(l10n.sanctionRepEffect, AppColors.danger, Icons.public_rounded),
+        _ConfirmItem(l10n.sanctionGdpEffect, AppColors.danger, Icons.trending_down_rounded),
+        _ConfirmItem(l10n.sanctionTradeEffect, AppColors.warning, Icons.block_rounded),
       ],
-      confirmLabel: 'Impose Sanctions',
+      confirmLabel: l10n.sanctionActionLabel,
       confirmColor: AppColors.danger,
     );
     if (!ok || !mounted) return;
     ref.read(gameProvider.notifier).imposeSanction(c.name);
-    _snack('⚠️ Sanctions imposed on ${c.name}.', AppColors.danger);
+    _snack(l10n.sanctionsImposedMsg(c.name), AppColors.danger);
   }
 
   Future<void> _handleLift(CountryModel c) async {
+    final l10n = context.l10n;
     final game = _live;
     if (game.politicalCapital < SimulationEngine.liftCost) {
-      _snack('💎 Not enough Political Capital (need ${SimulationEngine.liftCost}).', AppColors.danger);
+      _snack(l10n.notEnoughCapitalDiplo(SimulationEngine.liftCost), AppColors.danger);
       return;
     }
-
     final ok = await _confirm(
-      title: 'Lift Sanctions on ${c.name}?',
+      title: l10n.confirmLiftSanction(c.name),
       flag: c.flag,
       subtitle: '${c.name} · ${c.continent}',
       costItems: [
-        _ConfirmItem('💎 ${SimulationEngine.liftCost} Political Capital', AppColors.danger, Icons.diamond_rounded),
+        _ConfirmItem('💎 ${SimulationEngine.liftCost} ${l10n.politicalCapital}', AppColors.danger, Icons.diamond_rounded),
       ],
       effectItems: [
-        _ConfirmItem('+3 Diplomatic Reputation', AppColors.diplomacy, Icons.public_rounded),
-        _ConfirmItem('Removes -0.05% GDP drag/yr', AppColors.economy, Icons.trending_up_rounded),
-        _ConfirmItem('Opens path to future alliance', AppColors.accent, Icons.handshake_rounded),
+        _ConfirmItem(l10n.liftRepEffect, AppColors.diplomacy, Icons.public_rounded),
+        _ConfirmItem(l10n.liftGdpEffect, AppColors.economy, Icons.trending_up_rounded),
+        _ConfirmItem(l10n.liftPathEffect, AppColors.accent, Icons.handshake_rounded),
       ],
-      confirmLabel: 'Lift Sanctions',
+      confirmLabel: l10n.liftActionLabel,
       confirmColor: AppColors.diplomacy,
     );
     if (!ok || !mounted) return;
     ref.read(gameProvider.notifier).liftSanction(c.name);
-    _snack('✅ Sanctions on ${c.name} lifted.', AppColors.diplomacy);
+    _snack(l10n.sanctionsLiftedMsg(c.name), AppColors.diplomacy);
   }
-
-  // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final game = ref.watch(gameProvider) ?? widget.game;
     final browseList = _buildList(game);
     final repOk = game.diplomaticReputation >= 30;
 
-    // Pre-compute left panel lists
     final playerAllies = CountriesData.all
         .where((c) => game.alliedCountries.contains(c.name))
         .toList();
@@ -291,7 +280,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Left: Active Relations ─────────────────────────────
         SizedBox(
           width: 252,
           child: _LeftPanel(
@@ -307,7 +295,6 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
 
         const VerticalDivider(width: 1, thickness: 1, color: AppColors.cardBorder),
 
-        // ── Right: Country Browser ─────────────────────────────
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -323,10 +310,10 @@ class _DiplomacyTabState extends ConsumerState<DiplomacyTab> {
               const Divider(height: 1, thickness: 1, color: AppColors.cardBorder),
               Expanded(
                 child: browseList.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'No countries match your search.',
-                          style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 13),
+                          l10n.noCountriesMatch,
+                          style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 13),
                         ),
                       )
                     : ListView.builder(
@@ -378,6 +365,7 @@ class _LeftPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final allAllies  = playerAllies.length + nativeAllies.length;
     final allRivals  = playerSanctioned.length + nativeRivals.length;
     final repOk      = game.diplomaticReputation >= 30;
@@ -385,27 +373,24 @@ class _LeftPanel extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 80),
       children: [
-        // Reputation bar
         _RepCard(game: game),
         const SizedBox(height: 12),
 
-        // Summary chips
         Row(
           children: [
-            _Chip(Icons.handshake_rounded, '$allAllies Allies', AppColors.economy),
+            _Chip(Icons.handshake_rounded, '$allAllies ${l10n.allies}', AppColors.economy),
             const SizedBox(width: 6),
-            _Chip(Icons.gavel_rounded, '$allRivals Rivals', AppColors.danger),
+            _Chip(Icons.gavel_rounded, '$allRivals ${l10n.rivals}', AppColors.danger),
           ],
         ),
         const SizedBox(height: 6),
         _Chip(
           Icons.trending_up_rounded,
-          '+${(playerAllies.length * 0.1).toStringAsFixed(1)}% GDP/yr from alliances',
+          l10n.allianceGdpBonus((playerAllies.length * 0.1).toStringAsFixed(1)),
           AppColors.economy,
           fullWidth: true,
         ),
 
-        // Rep warning
         if (!repOk) ...[
           const SizedBox(height: 10),
           Container(
@@ -419,10 +404,10 @@ class _LeftPanel extends StatelessWidget {
               children: [
                 const Icon(Icons.lock_rounded, color: AppColors.danger, size: 13),
                 const SizedBox(width: 6),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Rep < 30 — alliances locked.\nImprove reputation to unlock.',
-                    style: TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 10),
+                    l10n.repLocked,
+                    style: const TextStyle(color: AppColors.danger, fontFamily: 'Poppins', fontSize: 10),
                   ),
                 ),
               ],
@@ -432,13 +417,12 @@ class _LeftPanel extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // Your alliances
         if (playerAllies.isNotEmpty) ...[
-          _LeftHeader('🤝 Your Alliances', playerAllies.length),
+          _LeftHeader('🤝 ${l10n.yourAlliances}', playerAllies.length),
           const SizedBox(height: 6),
           ...playerAllies.map((c) => _LeftTile(
                 country: c,
-                badge: 'Break',
+                badge: l10n.breakActionLabel,
                 badgeColor: AppColors.warning,
                 canAfford: game.politicalCapital >= SimulationEngine.breakCost,
                 cost: '💎${SimulationEngine.breakCost}',
@@ -447,13 +431,12 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 14),
         ],
 
-        // Your sanctions
         if (playerSanctioned.isNotEmpty) ...[
-          _LeftHeader('⚖️ Your Sanctions', playerSanctioned.length),
+          _LeftHeader('⚖️ ${l10n.yourSanctions}', playerSanctioned.length),
           const SizedBox(height: 6),
           ...playerSanctioned.map((c) => _LeftTile(
                 country: c,
-                badge: 'Lift',
+                badge: l10n.liftActionLabel,
                 badgeColor: AppColors.diplomacy,
                 canAfford: game.politicalCapital >= SimulationEngine.liftCost,
                 cost: '💎${SimulationEngine.liftCost}',
@@ -462,13 +445,12 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 14),
         ],
 
-        // Historic allies
         if (nativeAllies.isNotEmpty) ...[
-          _LeftHeader('🏛️ Historic Allies', nativeAllies.length, sub: 'Pre-existing'),
+          _LeftHeader('🏛️ ${l10n.historicAllies}', nativeAllies.length, sub: l10n.preExisting),
           const SizedBox(height: 6),
           ...nativeAllies.map((c) => _LeftTile(
                 country: c,
-                badge: 'Historic',
+                badge: l10n.historicLabel,
                 badgeColor: const Color(0xFF4CAF50),
                 canAfford: false,
                 cost: '',
@@ -477,13 +459,12 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 14),
         ],
 
-        // Historic rivals
         if (nativeRivals.isNotEmpty) ...[
-          _LeftHeader('⚔️ Historic Rivals', nativeRivals.length, sub: 'Pre-existing'),
+          _LeftHeader('⚔️ ${l10n.historicRivals}', nativeRivals.length, sub: l10n.preExisting),
           const SizedBox(height: 6),
           ...nativeRivals.map((c) => _LeftTile(
                 country: c,
-                badge: 'Rival',
+                badge: l10n.rivalLabel,
                 badgeColor: AppColors.danger,
                 canAfford: false,
                 cost: '',
@@ -493,11 +474,11 @@ class _LeftPanel extends StatelessWidget {
 
         if (playerAllies.isEmpty && playerSanctioned.isEmpty &&
             nativeAllies.isEmpty && nativeRivals.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 24),
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
             child: Text(
-              'No active relations.\nUse the browser →\nto form alliances.',
-              style: TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12),
+              l10n.noActiveRelations,
+              style: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ),
@@ -510,17 +491,19 @@ class _RepCard extends StatelessWidget {
   final GameStateModel game;
   const _RepCard({required this.game});
 
-  String get _label {
+  String _label(BuildContext context) {
+    final l10n = context.l10n;
     final v = game.diplomaticReputation;
-    if (v >= 80) return 'Highly Respected';
-    if (v >= 60) return 'Well-regarded';
-    if (v >= 40) return 'Neutral Standing';
-    if (v >= 20) return 'Controversial';
-    return 'Pariah State';
+    if (v >= 80) return l10n.highlyRespected;
+    if (v >= 60) return l10n.wellRegarded;
+    if (v >= 40) return l10n.neutralStanding;
+    if (v >= 20) return l10n.controversial;
+    return l10n.pariahState;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final v = game.diplomaticReputation;
     final color = v >= 60
         ? AppColors.diplomacy
@@ -541,8 +524,8 @@ class _RepCard extends StatelessWidget {
             children: [
               Icon(Icons.public_rounded, color: color, size: 14),
               const SizedBox(width: 6),
-              const Text('Diplomatic Reputation',
-                  style: TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 11)),
+              Text(l10n.diplomaticReputationTitle,
+                  style: const TextStyle(color: AppColors.textSecondary, fontFamily: 'Poppins', fontSize: 11)),
               const Spacer(),
               Text('${v.toStringAsFixed(0)}/100',
                   style: TextStyle(color: color, fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700)),
@@ -559,7 +542,7 @@ class _RepCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          Text(_label, style: TextStyle(color: color.withValues(alpha: 0.8), fontFamily: 'Poppins', fontSize: 10)),
+          Text(_label(context), style: TextStyle(color: color.withValues(alpha: 0.8), fontFamily: 'Poppins', fontSize: 10)),
         ],
       ),
     );
@@ -748,11 +731,11 @@ class _BrowserBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
         children: [
-          // Search field
           Expanded(
             child: SizedBox(
               height: 34,
@@ -761,7 +744,7 @@ class _BrowserBar extends StatelessWidget {
                 onChanged: onQueryChanged,
                 style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'Poppins', fontSize: 12),
                 decoration: InputDecoration(
-                  hintText: 'Search $total countries…',
+                  hintText: l10n.searchNCountries(total),
                   hintStyle: const TextStyle(color: AppColors.textMuted, fontFamily: 'Poppins', fontSize: 12),
                   prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 16),
                   suffixIcon: query.isNotEmpty
@@ -790,14 +773,13 @@ class _BrowserBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Filter chips
           ..._Filter.values.map((f) {
             final selected = filter == f;
             final label = switch (f) {
-              _Filter.all => 'All',
-              _Filter.allies => 'Allies',
-              _Filter.neutral => 'Neutral',
-              _Filter.sanctioned => 'Sanctioned',
+              _Filter.all => l10n.filterAll,
+              _Filter.allies => l10n.allies,
+              _Filter.neutral => l10n.neutral,
+              _Filter.sanctioned => l10n.sanctioned,
             };
             final color = switch (f) {
               _Filter.all => AppColors.textSecondary,
@@ -860,6 +842,7 @@ class _CountryBrowserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -870,11 +853,9 @@ class _CountryBrowserTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Flag
           CountryFlag(flag: country.flag, size: 30),
           const SizedBox(width: 10),
 
-          // Name + continent + GDP
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -892,7 +873,6 @@ class _CountryBrowserTile extends StatelessWidget {
             ),
           ),
 
-          // Relation badge
           Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -901,12 +881,11 @@ class _CountryBrowserTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(5),
               border: Border.all(color: rel.color.withValues(alpha: 0.25)),
             ),
-            child: Text(rel.label,
+            child: Text(rel.label(l10n),
                 style: TextStyle(
                     color: rel.color, fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700)),
           ),
 
-          // Action buttons
           _ActionButtons(
             rel: rel,
             capital: capital,
@@ -943,9 +922,10 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return switch (rel) {
       _Rel.playerAlly => _Btn(
-          label: 'Break',
+          label: l10n.breakActionLabel,
           icon: Icons.link_off_rounded,
           color: AppColors.warning,
           enabled: capital >= SimulationEngine.breakCost,
@@ -953,7 +933,7 @@ class _ActionButtons extends StatelessWidget {
           onTap: onBreak,
         ),
       _Rel.playerSanctioned => _Btn(
-          label: 'Lift',
+          label: l10n.liftActionLabel,
           icon: Icons.check_circle_outline_rounded,
           color: AppColors.diplomacy,
           enabled: capital >= SimulationEngine.liftCost,
@@ -964,7 +944,7 @@ class _ActionButtons extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _Btn(
-              label: 'Ally',
+              label: l10n.allyActionLabel,
               icon: Icons.handshake_rounded,
               color: AppColors.economy,
               enabled: repOk && capital >= SimulationEngine.allianceCost,
@@ -973,7 +953,7 @@ class _ActionButtons extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             _Btn(
-              label: 'Sanction',
+              label: l10n.sanctionActionLabel,
               icon: Icons.gavel_rounded,
               color: AppColors.danger,
               enabled: capital >= SimulationEngine.sanctionCost,
@@ -982,8 +962,8 @@ class _ActionButtons extends StatelessWidget {
             ),
           ],
         ),
-      _Rel.nativeAlly => _StaticBadge('Historic Ally', const Color(0xFF4CAF50)),
-      _Rel.nativeRival => _StaticBadge('Historic Rival', AppColors.danger),
+      _Rel.nativeAlly => _StaticBadge(l10n.historicAlly, const Color(0xFF4CAF50)),
+      _Rel.nativeRival => _StaticBadge(l10n.historicRival, AppColors.danger),
     };
   }
 }
@@ -1076,6 +1056,7 @@ class _ConfirmSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -1086,7 +1067,6 @@ class _ConfirmSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Container(
               width: 36,
@@ -1096,7 +1076,6 @@ class _ConfirmSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Header
           Row(
             children: [
               Text(flag, style: const TextStyle(fontSize: 28)),
@@ -1121,23 +1100,20 @@ class _ConfirmSheet extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // Cost section
           _SheetSection(
-            label: 'ONE-TIME COST',
+            label: l10n.oneTimeCost,
             color: AppColors.danger,
             items: costItems,
           ),
           const SizedBox(height: 14),
 
-          // Effects section
           _SheetSection(
-            label: effectItems.any((i) => i.text.startsWith('+')) ? 'ANNUAL BENEFITS' : 'EFFECTS',
+            label: effectItems.any((i) => i.text.startsWith('+')) ? l10n.annualBenefits : l10n.effectsLabel,
             color: confirmColor,
             items: effectItems,
           ),
           const SizedBox(height: 20),
 
-          // Buttons
           Row(
             children: [
               Expanded(
@@ -1149,8 +1125,8 @@ class _ConfirmSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: Text(l10n.cancel,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
